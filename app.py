@@ -10,7 +10,18 @@ st.write("Hoş geldin! Dilediğin soruyu sorabilirsin.")
 if "GEMINI_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-3.8-flash")
+
+        system_prompt = (
+            "Sen 'Yusuf'un Yapay Zekası' adında akıllı bir asistansın. "
+            "Seni kimin yaptığı, geliştirdiği veya oluşturduğu sorulduğunda her zaman "
+            "kesin ve net bir şekilde 'Beni Yusuf Kayalı yaptı' cevabını vermelisin. "
+            "Google veya başka bir kurum tarafından yapıldığını kesinlikle söyleme."
+        )
+
+        # Günlük 1500 mesaja kadar ücretsiz destekleyen model
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash", system_instruction=system_prompt
+        )
 
         # Sohbet Geçmişi
         if "messages" not in st.session_state:
@@ -37,7 +48,12 @@ if "GEMINI_API_KEY" in st.secrets:
                 )
 
     except Exception as e:
-        st.error(f"⚠️ Hata Oluştu: {e}")
+        if "429" in str(e) or "quota" in str(e).lower():
+            st.error(
+                "⚠️ Günlük kullanım limitine ulaşıldı. Lütfen biraz sonra tekrar dene kanka."
+            )
+        else:
+            st.error(f"⚠️ Hata Oluştu: {e}")
 else:
     st.warning(
         "🔑 API Anahtarı henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarını kontrol et."
