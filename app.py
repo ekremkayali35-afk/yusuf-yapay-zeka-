@@ -10,12 +10,12 @@ if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-        # Groq üzerindeki güncel ve aktif modeller
+        # Groq üzerindeki aktif ve güncel modeller
         candidate_models = [
             "llama-3.3-70b-versatile",
             "llama3-8b-8192",
+            "gemma2-9b-it",
             "llama3-70b-8192",
-            "mixtral-8x7b-32768",
         ]
 
         if "messages" not in st.session_state:
