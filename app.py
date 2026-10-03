@@ -10,7 +10,7 @@ if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-        # Groq üzerindeki %100 aktif çalışan güncel modeller
+        # Sadece %100 aktif ve güncel modeller
         candidate_models = [
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
