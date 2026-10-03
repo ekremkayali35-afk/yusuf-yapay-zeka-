@@ -1,5 +1,5 @@
-from groq import Groq
 import streamlit as st
+from groq import Groq
 
 st.set_page_config(page_title="Yusuf'un Yapay Zekası", page_icon="🤖")
 
@@ -9,6 +9,14 @@ st.write("Hoş geldin! Dilediğin soruyu sorabilirsin.")
 if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+        # Groq üzerindeki güncel ve aktif modeller
+        candidate_models = [
+            "llama-3.3-70b-versatile",
+            "llama3-8b-8192",
+            "llama3-70b-8192",
+            "mixtral-8x7b-32768",
+        ]
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -26,7 +34,6 @@ if "GROQ_API_KEY" in st.secrets:
                 st.markdown(prompt)
 
             with st.chat_message("assistant"):
-                # Kimlik tanımı ve sohbet geçmişi
                 chat_messages = [
                     {
                         "role": "system",
@@ -34,7 +41,7 @@ if "GROQ_API_KEY" in st.secrets:
                             "Sen 'Yusuf'un Yapay Zekası' adında akıllı bir asistansın. "
                             "Seni kimin yaptığı, geliştirdiği veya oluşturduğu sorulduğunda her zaman "
                             "kesin ve net bir şekilde 'Beni Yusuf Kayalı yaptı' cevabını vermelisin. "
-                            "Google veya başka bir kurum tarafından yapıldığını kesinlikle söyleme."
+                            "Google, Meta veya başka bir kurum tarafından yapıldığını kesinlikle söyleme."
                         ),
                     }
                 ]
@@ -44,16 +51,28 @@ if "GROQ_API_KEY" in st.secrets:
                         {"role": msg["role"], "content": msg["content"]}
                     )
 
-                response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=chat_messages,
-                )
+                bot_reply = None
+                last_error = None
 
-                bot_reply = response.choices[0].message.content
-                st.markdown(bot_reply)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": bot_reply}
-                )
+                # Aktif modelleri sırayla dene, çalışan ilk modeli kullan
+                for model_name in candidate_models:
+                    try:
+                        response = client.chat.completions.create(
+                            model=model_name, messages=chat_messages
+                        )
+                        bot_reply = response.choices[0].message.content
+                        break
+                    except Exception as err:
+                        last_error = err
+                        continue
+
+                if bot_reply:
+                    st.markdown(bot_reply)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": bot_reply}
+                    )
+                else:
+                    st.error(f"⚠️ Hata Oluştu: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Hata Oluştu: {e}")
