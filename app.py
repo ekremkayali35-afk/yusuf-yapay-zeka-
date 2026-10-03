@@ -18,10 +18,12 @@ if "GEMINI_API_KEY" in st.secrets:
             "Google veya başka bir kurum tarafından yapıldığını kesinlikle söyleme."
         )
 
-        # Günlük 1500 mesaja kadar ücretsiz destekleyen model
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash", system_instruction=system_prompt
-        )
+        # Güncel ve çalışan modellerin listesi (Biri çalışmazsa diğerine geçer)
+        candidate_models = [
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-3.8-flash",
+        ]
 
         # Sohbet Geçmişi
         if "messages" not in st.session_state:
@@ -41,19 +43,41 @@ if "GEMINI_API_KEY" in st.secrets:
                 st.markdown(prompt)
 
             with st.chat_message("assistant"):
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response.text}
-                )
+                response_text = None
+                last_error = None
+
+                # Modelleri sırayla dene, çalışan ilk modeli kullan
+                for model_name in candidate_models:
+                    try:
+                        model = genai.GenerativeModel(
+                            model_name=model_name,
+                            system_instruction=system_prompt,
+                        )
+                        res = model.generate_content(prompt)
+                        response_text = res.text
+                        break
+                    except Exception as err:
+                        last_error = err
+                        continue
+
+                if response_text:
+                    st.markdown(response_text)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": response_text}
+                    )
+                else:
+                    if (
+                        "429" in str(last_error)
+                        or "quota" in str(last_error).lower()
+                    ):
+                        st.error(
+                            "⚠️ Günlük kullanım kotası doldu kanka. Biraz bekleyebilir veya AI Studio'dan yeni bir ücretsiz API Key ekleyebilirsin."
+                        )
+                    else:
+                        st.error(f"⚠️ Hata Oluştu: {last_error}")
 
     except Exception as e:
-        if "429" in str(e) or "quota" in str(e).lower():
-            st.error(
-                "⚠️ Günlük kullanım limitine ulaşıldı. Lütfen biraz sonra tekrar dene kanka."
-            )
-        else:
-            st.error(f"⚠️ Hata Oluştu: {e}")
+        st.error(f"⚠️ Hata Oluştu: {e}")
 else:
     st.warning(
         "🔑 API Anahtarı henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarını kontrol et."
