@@ -10,12 +10,17 @@ if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-        # Sadece %100 aktif ve güncel modeller
-        candidate_models = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "gemma2-9b-it"
-        ]
+        # Groq sunucularındaki O AN AKTİF olan modelleri canlı olarak çekiyoruz
+        try:
+            models_list = client.models.list()
+            # Sadece sohbet için uygun olan aktif modelleri filtreliyoruz
+            active_models = [
+                m.id for m in models_list.data 
+                if "whisper" not in m.id and "guard" not in m.id and "safetensors" not in m.id
+            ]
+        except Exception:
+            # Canlı liste çekilemezse varsayılan en güncel modeller
+            active_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -49,8 +54,8 @@ if "GROQ_API_KEY" in st.secrets:
                 bot_reply = None
                 last_error = None
 
-                # Aktif modelleri sırayla dene
-                for model_name in candidate_models:
+                # Canlı listeden bulduğu ilk çalışan aktif modeli kullanır
+                for model_name in active_models:
                     try:
                         response = client.chat.completions.create(
                             model=model_name,
