@@ -10,7 +10,7 @@ st.write("Hoş geldin! Dilediğin soruyu sorabilirsin.")
 if "GEMINI_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         # Sohbet Geçmişi
         if "messages" not in st.session_state:
