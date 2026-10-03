@@ -10,12 +10,11 @@ if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-        # Groq üzerindeki aktif ve güncel modeller
+        # Groq üzerindeki %100 aktif çalışan güncel modeller
         candidate_models = [
             "llama-3.3-70b-versatile",
-            "llama3-8b-8192",
-            "gemma2-9b-it",
-            "llama3-70b-8192",
+            "llama-3.1-8b-instant",
+            "gemma2-9b-it"
         ]
 
         if "messages" not in st.session_state:
@@ -27,9 +26,7 @@ if "GROQ_API_KEY" in st.secrets:
                 st.markdown(message["content"])
 
         if prompt := st.chat_input("Bir şeyler yaz..."):
-            st.session_state.messages.append(
-                {"role": "user", "content": prompt}
-            )
+            st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
 
@@ -42,23 +39,22 @@ if "GROQ_API_KEY" in st.secrets:
                             "Seni kimin yaptığı, geliştirdiği veya oluşturduğu sorulduğunda her zaman "
                             "kesin ve net bir şekilde 'Beni Yusuf Kayalı yaptı' cevabını vermelisin. "
                             "Google, Meta veya başka bir kurum tarafından yapıldığını kesinlikle söyleme."
-                        ),
+                        )
                     }
                 ]
 
                 for msg in st.session_state.messages:
-                    chat_messages.append(
-                        {"role": msg["role"], "content": msg["content"]}
-                    )
+                    chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
                 bot_reply = None
                 last_error = None
 
-                # Aktif modelleri sırayla dene, çalışan ilk modeli kullan
+                # Aktif modelleri sırayla dene
                 for model_name in candidate_models:
                     try:
                         response = client.chat.completions.create(
-                            model=model_name, messages=chat_messages
+                            model=model_name,
+                            messages=chat_messages
                         )
                         bot_reply = response.choices[0].message.content
                         break
@@ -68,15 +64,11 @@ if "GROQ_API_KEY" in st.secrets:
 
                 if bot_reply:
                     st.markdown(bot_reply)
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": bot_reply}
-                    )
+                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
                     st.error(f"⚠️ Hata Oluştu: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Hata Oluştu: {e}")
 else:
-    st.warning(
-        "🔑 GROQ_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarını kontrol et."
-    )
+    st.warning("🔑 GROQ_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarını kontrol et.")
