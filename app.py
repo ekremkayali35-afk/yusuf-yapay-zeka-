@@ -90,18 +90,18 @@ if "GEMINI_API_KEY" in st.secrets:
         
         KESİN KURALLAR:
         1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
-        2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
-        3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
+        2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
+        3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
         """
 
-        # Gemini Sohbet Oturumunu Başlat (Hız ve bağlam koruma için)
+        # Gemini Sohbet Oturumunu Başlat
         if "chat_session" not in st.session_state:
             st.session_state.chat_session = client.chats.create(
                 model="gemini-3.8-flash",
                 config={
                     "system_instruction": system_instruction,
-                    "temperature": 0.3,
-                    "max_output_tokens": 300
+                    "temperature": 0.5,
+                    "max_output_tokens": 800  # Uzun yazabilmesi için artırıldı
                 }
             )
 
@@ -116,25 +116,27 @@ if "GEMINI_API_KEY" in st.secrets:
                 st.markdown(prompt)
 
             with st.chat_message("assistant", avatar="🤖"):
-                bot_reply = None
-                api_err = None
-                
-                for attempt in range(3):
-                    try:
-                        # Hazır sohbet oturumu üzerinden hızlı gönderim
-                        response = st.session_state.chat_session.send_message(prompt)
-                        if response and response.text:
-                            bot_reply = response.text
-                            break
-                    except Exception as e:
-                        api_err = e
-                        time.sleep(1)
+                try:
+                    # Canlı akış (streaming) ile anında tepki verme
+                    response_stream = st.session_state.chat_session.send_message(prompt, stream=True)
+                    
+                    def generate_reply():
+                        full_response = ""
+                        for chunk in response_stream:
+                            if chunk.text:
+                                full_response += chunk.text
+                                yield chunk.text
+                        # Tam metni oturum geçmişine kaydetmek için saklıyoruz
+                        st.session_state.temp_full_reply = full_response
 
-                if bot_reply and str(bot_reply).strip():
-                    st.markdown(bot_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                else:
-                    st.error(f"⚠️ Gemini API Hatası: {api_err}")
+                    bot_reply = st.write_stream(generate_reply())
+                    
+                    if "temp_full_reply" in st.session_state:
+                        st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
+                        del st.session_state.temp_full_reply
+
+                except Exception as e:
+                    st.error(f"⚠️ Gemini API Hatası: {e}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
