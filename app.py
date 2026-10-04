@@ -59,7 +59,7 @@ canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday
 canli_saat = now.strftime("%H:%M")
 
 with st.sidebar:
-    st.header("⚙️️ Ayarlar")
+    st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
     st.write("Altyapı: **Google Gemini**")
     st.divider()
@@ -98,19 +98,11 @@ if "GEMINI_API_KEY" in st.secrets:
                 3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                gemini_contents = []
-                for msg in st.session_state.messages:
-                    role_name = "user" if msg["role"] == "user" else "model"
-                    gemini_contents.append({
-                        "role": role_name,
-                        "parts": [{"text": msg["content"]}]
-                    })
-
+                # Doğrudan son mesajı ve sistem talimatını vererek boş dönme ihtimalini sıfırlıyoruz
                 try:
-                    # Hata mesajında belirtilen en güncel model ismiyle güncellendi
-                    response = client.models.generate_content_stream(
-                        model="gemini-3.8-flash",
-                        contents=gemini_contents,
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=prompt,
                         config={
                             "system_instruction": system_instruction,
                             "temperature": 0.3,
@@ -118,14 +110,10 @@ if "GEMINI_API_KEY" in st.secrets:
                         }
                     )
 
-                    def generate_stream():
-                        for chunk in response:
-                            if chunk.text:
-                                yield chunk.text
-
-                    bot_reply = st.write_stream(generate_stream())
+                    bot_reply = response.text if response and response.text else "Yanıt oluşturulamadı."
 
                     if bot_reply and str(bot_reply).strip():
+                        st.markdown(bot_reply)
                         st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                     else:
                         st.error("⚠️ Model boş yanıt döndürdü.")
