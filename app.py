@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v10.0 (Gemini Gücü)**")
+    st.write("Sürüm: **Yusuf AI v10.1 (Gemini Güncel)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -120,8 +120,8 @@ if "GEMINI_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=api_key_val)
         
-        # Google'ın en hızlı ve akıllı ücretsiz modeli: gemini-1.5-flash
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # En güncel ve stabil çalışan Gemini flash modeli
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -149,7 +149,6 @@ if "GEMINI_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    # Gemini geçmiş formatına dönüştür
                     gemini_history = []
                     for msg in st.session_state.messages[:-1]:
                         role_mapping = "user" if msg["role"] == "user" else "model"
@@ -157,7 +156,6 @@ if "GEMINI_API_KEY" in st.secrets:
 
                     chat = model.start_chat(history=gemini_history)
                     
-                    # Sistem talimatını ve mesajı birleştirip gönder
                     full_prompt = f"{system_instruction_text}\n\nKullanıcı: {prompt}"
                     
                     response = chat.send_message(full_prompt)
