@@ -98,25 +98,28 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # Sadece Groq üzerinde sorunsuz çalışan, sözleşmesiz standart modeller listesi
+                # TAMAMEN OTOMATİK MODEL SEÇİCİ
                 try:
-                    live_models = [m.id for m in client.models.list().data]
-                    guvenli_havuz = [
-                        "llama-3.3-70b-versatile",
-                        "llama-3.2-90b-vision-preview",
-                        "llama-3.2-11b-vision-preview",
-                        "llama-3.2-3b-preview",
-                        "gemma2-9b-it",
-                        "mixtral-8x7b-32768"
+                    # Hesabına tanımlı tüm modelleri çek
+                    models_info = client.models.list().data
+                    available_models = [m.id for m in models_info]
+                    
+                    # Sadece yazı yazabilen güvenli modelleri ayıkla
+                    candidate_models = [
+                        m for m in available_models 
+                        if ("llama" in m.lower() or "gemma" in m.lower() or "mixtral" in m.lower())
+                        and "guard" not in m.lower() 
+                        and "vision" not in m.lower()
+                        and "whisper" not in m.lower()
                     ]
                     
-                    # API'den gelen canlı liste ile bizim güvenli listeyi karşılaştırıp ortak olanları bulur
-                    candidate_models = [m for m in guvenli_havuz if m in live_models]
-                    
-                    if not candidate_models:
-                        candidate_models = ["llama-3.3-70b-versatile"] # En son çare
-                except Exception:
-                    candidate_models = ["llama-3.3-70b-versatile"]
+                    # Eğer hiçbir filtreye uymazsa, eldeki ilk modeli zorla kullan
+                    if not candidate_models and available_models:
+                        candidate_models = [available_models[0]]
+                        
+                except Exception as err:
+                    candidate_models = []
+                    st.error(f"Groq ile iletişim kurulamadı: {err}")
 
                 bot_reply = None
                 last_error = None
@@ -148,7 +151,7 @@ if "GROQ_API_KEY" in st.secrets:
                 if bot_reply is not None and str(bot_reply).strip() != "":
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Bağlantı Hatası: {last_error}")
+                    st.error(f"⚠️ Bağlantı Hatası: Kullanılabilir model bulunamadı veya API yetkiniz kısıtlanmış. Detay: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
