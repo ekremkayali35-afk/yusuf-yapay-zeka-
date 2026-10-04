@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. ÖZEL NEON, RGB VE ÇOK SATIRLI INPUT TASARIMI
+# 2. ÖZEL NEON, RGB VE ÇOK SATIRLI INPUT CSS TASARIMI
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -101,7 +101,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v4.0 (Tam Stabil)**")
+    st.write("Sürüm: **Yusuf AI v4.5 (Chat Modelleri Filtreli)**")
     st.divider()
     if st.button("🧹 Sohbeti Sıfırla (Temizle)", use_container_width=True):
         st.session_state.messages = []
@@ -120,7 +120,6 @@ if "GROQ_API_KEY" in st.secrets:
             if "messages" not in st.session_state:
                 st.session_state.messages = []
 
-            # SAF VE SADECE YAPAY ZEKA KİŞİLİĞİ (İSİM KARIŞIKLIĞI ENGELLEYİCİ)
             system_instruction = f"""
             Sen "Yusuf AI" adında eğlenceli, aşırı enerjik, samimi ve zeki bir yapay zeka asistansın.
             
@@ -128,7 +127,7 @@ if "GROQ_API_KEY" in st.secrets:
             1. Türkçe konuş. Samimi kanka üslubu kullan ("Naber baby!", "Fişek gibiyiz kanka!", "Nasıl yardımcı olayım?").
             2. Yanıtlarında bolca emoji kullan (🚀🔥🤖⚡🎉💪).
             3. "Selam", "Nasılsın", "Naber" gibi selamlaşmalara 1-2 cümlelik neşeli cevaplar ver.
-            4. Sen bir insansın veya geliştirici değilsin, bir yapay zekasın. Asla akademik nutuklar atma, aynı cümleleri tekrarlama.
+            4. Sen bir insansın veya geliştirici değilsin, bir yapay zekasın. Asla kendini tekrar etme veya akademik nutuklar atma.
 
             Tarih: {canli_tarih} | Saat: {canli_saat}
             """
@@ -146,27 +145,42 @@ if "GROQ_API_KEY" in st.secrets:
                 with st.chat_message("assistant", avatar="🤖"):
                     try:
                         groq_messages = [{"role": "system", "content": system_instruction}]
-                        # Sadece son 4 mesajı gönder ki geçmiş saçmalıklar yeni cevabı bozmasın
                         for msg in st.session_state.messages[-4:]:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # MODEL SEÇİMİ
+                        # SADECE SOHBET EDEBİLEN MODEL FİLTRESİ
+                        known_chat_models = [
+                            "llama-3.1-8b-instant",
+                            "llama3-8b-8192",
+                            "llama3-70b-8192",
+                            "gemma2-9b-it",
+                            "mixtral-8x7b-32768"
+                        ]
+                        
                         raw_models = [m.id for m in client.models.list().data]
                         
-                        target_model = None
-                        for pref in ["llama-3.1-8b-instant", "llama3-8b-8192", "gemma2-9b-it"]:
-                            if pref in raw_models:
-                                target_model = pref
+                        active_model = None
+                        for model_candidate in known_chat_models:
+                            if model_candidate in raw_models:
+                                active_model = model_candidate
                                 break
                         
-                        if not target_model and raw_models:
-                            target_model = raw_models[0]
+                        # Eğer bilinen listeyle eşleşme olmazsa sınıflandırma/güvenlik modellerini ele
+                        if not active_model:
+                            banned_keywords = ["guard", "whisper", "embed", "classify", "classifier", "vision", "audio", "mod"]
+                            for m_id in raw_models:
+                                if not any(b in m_id.lower() for b in banned_keywords):
+                                    active_model = m_id
+                                    break
+
+                        if not active_model:
+                            active_model = "llama-3.1-8b-instant"
 
                         stream = client.chat.completions.create(
-                            model=target_model,
+                            model=active_model,
                             messages=groq_messages,
                             temperature=0.7,
-                            frequency_penalty=0.5,  # Tekrarı kesin engelleyen parametre
+                            frequency_penalty=0.5,
                             max_tokens=350,
                             stream=True
                         )
@@ -187,7 +201,7 @@ if "GROQ_API_KEY" in st.secrets:
                             del st.session_state.temp_full_reply
 
                     except Exception as e:
-                        st.error(f"⚠️️ Yusuf AI Hatası: {e}")
+                        st.error(f"⚠️ Yusuf AI Hatası: {e}")
 
         except Exception as e:
             st.error(f"⚠️ Bağlantı Hatası: {e}")
