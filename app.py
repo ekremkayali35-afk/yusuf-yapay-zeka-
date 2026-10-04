@@ -126,7 +126,7 @@ if "GROQ_API_KEY" in st.secrets:
                                     temperature=0.6,
                                     max_tokens=1024,
                                     stream=True
-                                ??) # syntax fix:
+                                )
                                 break
                             except Exception as err:
                                 last_error = err
