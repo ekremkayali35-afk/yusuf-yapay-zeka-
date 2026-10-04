@@ -98,10 +98,10 @@ if "GEMINI_API_KEY" in st.secrets:
                 3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                # Doğrudan son mesajı ve sistem talimatını vererek boş dönme ihtimalini sıfırlıyoruz
                 try:
+                    # En güncel kararlı Flash modeli kimliği
                     response = client.models.generate_content(
-                        model="gemini-1.5-flash",
+                        model="gemini-2.5-flash",
                         contents=prompt,
                         config={
                             "system_instruction": system_instruction,
