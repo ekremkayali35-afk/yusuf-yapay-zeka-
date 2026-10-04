@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Dinamik Model)**")
+    st.write("Altyapı: **Groq (Akıllı Model)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -108,21 +108,35 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # --- DİNAMİK MODEL SEÇİCİ ---
+                        # --- AKILLI MODEL SEÇİCİ (GELİŞMİŞ FİLTRE) ---
                         available_models = client.models.list().data
-                        active_model = available_models[0].id
+                        active_model = None
                         
+                        # Guard (sınıflandırma), vision (görüntü) ve whisper (ses) modellerini ELEDİK!
+                        banned_words = ["guard", "vision", "whisper", "embed"]
+                        
+                        # Sadece gerçek metin (chat) modellerini ara
                         for m in available_models:
-                            if "llama" in m.id.lower() and "vision" not in m.id.lower():
+                            model_id = m.id.lower()
+                            if "llama" in model_id and not any(b in model_id for b in banned_words):
                                 active_model = m.id
                                 break
+                        
+                        # Eğer llama bulamazsa listedeki ilk uygun normal modeli al (örneğin mixtral veya gemma)
+                        if not active_model:
+                            for m in available_models:
+                                model_id = m.id.lower()
+                                if not any(b in model_id for b in banned_words):
+                                    active_model = m.id
+                                    break
                         # --------------------------------------------------------
 
+                        # Normal sohbet modelini bulduğumuz için kelime sınırını tekrar 1024'e çekiyoruz
                         stream = client.chat.completions.create(
                             model=active_model,
                             messages=groq_messages,
                             temperature=0.6,
-                            max_tokens=512,  # <-- İŞTE BURAYI 512 YAPTIK!
+                            max_tokens=1024,
                             stream=True
                         )
 
