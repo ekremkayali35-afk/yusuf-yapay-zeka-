@@ -1,10 +1,10 @@
 import streamlit as st
-import google.generativeai as genai
+from groq import Groq
 from datetime import datetime, timedelta, timezone
 
 # 1. SAYFA YAPILANDIRMASI
 st.set_page_config(
-    page_title="Yusuf AI - Gemini",
+    page_title="Yusuf AI - Groq",
     page_icon="🤖",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v10.2 (Gemini 3.8)**")
+    st.write("Sürüm: **Yusuf AI v12.0 (Groq Kararlı)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,25 +113,22 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# GEMINI API MOTORU
-if "GEMINI_API_KEY" in st.secrets:
-    api_key_val = st.secrets["GEMINI_API_KEY"]
+# GROQ API MOTORU
+if "GROQ_API_KEY" in st.secrets:
+    api_key_val = st.secrets["GROQ_API_KEY"]
     
     try:
-        genai.configure(api_key=api_key_val)
-        
-        # Google'ın önerdiği yeni model
-        model = genai.GenerativeModel('gemini-3.8-flash')
+        client = Groq(api_key=api_key_val)
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        system_instruction_text = f"""
+        system_instruction = f"""
         Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
         Kurallar:
-        1. Sadece Türkçe konuş.
-        2. Samimi, doğal bir arkadaş gibi konuş, saçma döngülere asla girme.
-        3. Sorulara net, mantıklı ve açıklayıcı yanıtlar ver.
+        1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.
+        2. Doğal, samimi bir arkadaş (kanka) gibi konuş, saçma döngülere asla girme.
+        3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.
         Tarih: {canli_tarih} | Saat: {canli_saat}
         """
 
@@ -149,25 +146,26 @@ if "GEMINI_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    gemini_history = []
-                    for msg in st.session_state.messages[:-1]:
-                        role_mapping = "user" if msg["role"] == "user" else "model"
-                        gemini_history.append({"role": role_mapping, "parts": [msg["content"]]})
+                    groq_messages = [{"role": "system", "content": system_instruction}]
+                    for msg in st.session_state.messages[-6:]:
+                        groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    chat = model.start_chat(history=gemini_history)
-                    
-                    full_prompt = f"{system_instruction_text}\n\nKullanıcı: {prompt}"
-                    
-                    response = chat.send_message(full_prompt)
-                    bot_reply = response.text
+                    # En kararlı ve hızlı Groq modeli
+                    response = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=groq_messages,
+                        temperature=0.7,
+                        max_tokens=1000
+                    )
 
+                    bot_reply = response.choices[0].message.content
                     st.markdown(bot_reply)
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
 
                 except Exception as e:
-                    st.error(f"⚠️ Gemini Yanıt Hatası: {e}")
+                    st.error(f"⚠️ Groq Yanıt Hatası: {e}")
 
     except Exception as e:
-        st.error(f"⚠️ Gemini Bağlantı Hatası: {e}")
+        st.error(f"⚠️️ Bağlantı Hatası: {e}")
 else:
-    st.warning("🔑 GEMINI_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
+    st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
