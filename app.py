@@ -101,7 +101,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v5.5 (Dinamik Model)**")
+    st.write("Sürüm: **Yusuf AI v5.5 (Tam Stabil)**")
     st.divider()
     if st.button("🧹 Sohbeti Sıfırla (Temizle)", use_container_width=True):
         st.session_state.messages = []
@@ -154,13 +154,11 @@ if "GROQ_API_KEY" in st.secrets:
                             raw_models = client.models.list().data
                             banned_keywords = ["guard", "whisper", "embed", "vision", "audio", "classify", "classifier", "orpheus"]
                             
-                            # Slaç veya yasaklı kelime içermeyen aktif sohbet modelleri
                             valid_models = [
                                 m.id for m in raw_models 
                                 if "/" not in m.id and not any(b in m.id.lower() for b in banned_keywords)
                             ]
                             
-                            # Öncelikli sohbet modelleri
                             priority_list = [
                                 "llama-3.3-70b-versatile",
                                 "llama-3.1-8b-instant",
@@ -175,13 +173,11 @@ if "GROQ_API_KEY" in st.secrets:
                                     active_model = p
                                     break
                             
-                            # Önceliklilerden biri yoksa, yayındaki ilk geçerli modeli seç
                             if not active_model and valid_models:
                                 active_model = valid_models[0]
                         except Exception:
                             pass
 
-                        # Son çare düşüş modeli
                         if not active_model:
                             active_model = "llama-3.3-70b-versatile"
 
@@ -210,7 +206,7 @@ if "GROQ_API_KEY" in st.secrets:
                             del st.session_state.temp_full_reply
 
                     except Exception as e:
-                        st.error(f"⚠️️ Yusuf AI Hatası: {e}")
+                        st.error(f"⚠️ Yusuf AI Hatası: {e}")
 
         except Exception as e:
             st.error(f"⚠️ Bağlantı Hatası: {e}")
