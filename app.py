@@ -102,11 +102,11 @@ if "GEMINI_API_KEY" in st.secrets:
                 bot_reply = None
                 api_err = None
                 
-                # Yoğunluk (503) hatasına karşı 3 kez otomatik deneme döngüsü
-                for attempt in range(3):
+                # Kararlı model ve genişletilmiş deneme aralığı
+                for attempt in range(4):
                     try:
                         response = client.models.generate_content(
-                            model="gemini-3.8-flash",
+                            model="gemini-1.5-flash",
                             contents=prompt,
                             config={
                                 "system_instruction": system_instruction,
@@ -119,7 +119,7 @@ if "GEMINI_API_KEY" in st.secrets:
                             break
                     except Exception as e:
                         api_err = e
-                        time.sleep(1.5)
+                        time.sleep(2)
 
                 if bot_reply and str(bot_reply).strip():
                     st.markdown(bot_reply)
