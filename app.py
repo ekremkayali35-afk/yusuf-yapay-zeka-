@@ -85,7 +85,6 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 
-                # BEYİN YIKAMA: KISA VE ÖZ YANIT KURALLARI
                 system_prompt = f"""
                 Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
                 Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
@@ -102,29 +101,12 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # SADECE ONAYLI VE SORUNSUZ MODELLERİ KULLANMA FİLTRESİ
-                try:
-                    live_models = [m.id for m in client.models.list().data]
-                    
-                    # Sadece bu güvenilir havuzdaki modellere izin veriyoruz
-                    guvenli_havuz = [
-                        "llama-3.3-70b-versatile",
-                        "llama-3.1-8b-instant",
-                        "llama3-8b-8192",
-                        "llama3-70b-8192",
-                        "gemma2-9b-it",
-                        "mixtral-8x7b-32768"
-                    ]
-                    
-                    # Sende açık olan ve güvenli havuzda bulunanları al
-                    candidate_models = [m for m in guvenli_havuz if m in live_models]
-                    
-                    # Eğer hiçbiri yoksa, sadece isminde "llama" geçen standart bir modele zorla, saçma sapan modellere girme
-                    if not candidate_models:
-                        candidate_models = [m for m in live_models if "llama" in m.lower() and "guard" not in m.lower()]
-                        
-                except Exception:
-                    candidate_models = ["llama-3.1-8b-instant"]
+                # GARANTİLİ VE SABİT MODELLER (Dinamik aramayı iptal ettik)
+                candidate_models = [
+                    "llama-3.3-70b-versatile",
+                    "llama-3.1-8b-instant",
+                    "llama3-8b-8192"
+                ]
 
                 bot_reply = None
                 last_error = None
@@ -132,13 +114,12 @@ if "GROQ_API_KEY" in st.secrets:
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
-                            # max_tokens=150 (Fiziksel kısa sınır), temperature=0.3 (Ciddiyet)
                             response = client.chat.completions.create(
                                 model=model_name,
                                 messages=chat_messages,
                                 stream=True,
                                 temperature=0.3,
-                                max_tokens=150
+                                max_tokens=200
                             )
                             for chunk in response:
                                 if chunk.choices and len(chunk.choices) > 0:
@@ -147,16 +128,19 @@ if "GROQ_API_KEY" in st.secrets:
                                         yield content
 
                         bot_reply = st.write_stream(generate_stream())
-                        if bot_reply:
+                        
+                        # Boş cevap dönmediğinden emin oluyoruz
+                        if bot_reply is not None and str(bot_reply).strip() != "":
                             break
                     except Exception as err:
                         last_error = err
                         continue
 
-                if bot_reply:
+                # Ekrana basma ve hafızaya alma kontrolü
+                if bot_reply is not None and str(bot_reply).strip() != "":
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Hata Oluştu: {last_error}")
+                    st.error(f"⚠️ Hata: {last_error if last_error else 'Model boş yanıt döndürdü, sayfayı yenileyin.'}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
