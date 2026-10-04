@@ -2,7 +2,7 @@ import streamlit as st
 from groq import Groq
 from datetime import datetime, timedelta, timezone
 
-# 1. PLAY STORE İÇİN MOBİL UYUMLU SAYFA YAPILANDIRMASI
+# 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
     page_title="Yusuf'un Yapay Zekası",
     page_icon="🤖",
@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. PROFESYONEL UYGULAMA ARAYÜZÜ (CSS - Özel Tasarım)
+# 2. ARAYÜZ TASARIMI
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -50,7 +50,7 @@ st.markdown("""
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
-# 3. CANLI TARİH VE SAAT (Türkiye)
+# 3. ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -85,7 +85,6 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 
-                # SIKI YÖNETİM TALİMATLARI
                 system_prompt = f"""
                 Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
                 Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
@@ -102,14 +101,21 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # SADECE EN SAĞLAM VE ZEKİ MODELLER (Saçmalama İhtimali %0)
+                # SADECE HESABINDA AÇIK OLAN MODELLERİ ÇEKER
                 try:
-                    live_models = [m.id for m in client.models.list().data]
-                    guvenli_modeller = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
-                    candidate_models = [m for m in guvenli_modeller if m in live_models]
+                    # Hesabındaki kullanılabilir modelleri al
+                    live_models = [m.id for m in client.models.list().data if "whisper" not in m.id and "guard" not in m.id and "llava" not in m.id]
                     
-                    if not candidate_models: # Eğer 3'ü de yoksa en güvenli yedeğe geç
-                        candidate_models = ["llama-3.1-8b-instant"]
+                    # Öncelikli kalite sıramız
+                    oncelikli_modeller = ["llama-3.3-70b-versatile", "llama3-8b-8192", "gemma2-9b-it"]
+                    
+                    # Sadece sende erişimi olanları filtrele
+                    candidate_models = [m for m in oncelikli_modeller if m in live_models]
+                    
+                    # Eğer öncelikliler yoksa hesabındaki ilk modeli kullan
+                    if not candidate_models and live_models:
+                        candidate_models = [live_models[0]]
+                        
                 except Exception:
                     candidate_models = ["llama-3.3-70b-versatile"]
 
@@ -119,8 +125,8 @@ if "GROQ_API_KEY" in st.secrets:
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
-                            # temperature=0.3 -> Ciddiyet ayarı (halüsinasyonu önler)
-                            # max_tokens=150 -> Uzun yazmasını fiziksel olarak engeller
+                            # max_tokens=150 ile fiziksel olarak kısa tutuyoruz
+                            # temperature=0.3 ile saçmalamasını engelliyoruz
                             response = client.chat.completions.create(
                                 model=model_name,
                                 messages=chat_messages,
@@ -144,7 +150,7 @@ if "GROQ_API_KEY" in st.secrets:
                 if bot_reply:
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Hata Oluştu: Lütfen sayfayı yenileyin. Detay: {last_error}")
+                    st.error(f"⚠️ Hata Oluştu: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
