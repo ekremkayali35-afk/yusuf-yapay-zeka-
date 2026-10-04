@@ -94,15 +94,13 @@ if "GEMINI_API_KEY" in st.secrets:
                 ZAMAN: {canli_tarih} - Saat: {canli_saat}
                 
                 KESİN KURALLAR:
-                1. ASLA saçmalama, anlamsız kelime üretme. Kusursuz Türkçe kullan.
-                2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
-                3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
+                1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
+                2. SADECE 6 VEYA 7 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
                 """
 
                 bot_reply = None
                 api_err = None
                 
-                # Google'ın zorunlu kıldığı model ile yoğunluğa karşı 4 kademeli akıllı deneme
                 for attempt in range(4):
                     try:
                         response = client.models.generate_content(
@@ -111,7 +109,7 @@ if "GEMINI_API_KEY" in st.secrets:
                             config={
                                 "system_instruction": system_instruction,
                                 "temperature": 0.3,
-                                "max_output_tokens": 150
+                                "max_output_tokens": 300  # Kesilmeyi önlemek için artırıldı
                             }
                         )
                         if response and response.text:
@@ -119,7 +117,7 @@ if "GEMINI_API_KEY" in st.secrets:
                             break
                     except Exception as e:
                         api_err = e
-                        time.sleep(2) # Yoğunluk durumunda kademeli bekleme
+                        time.sleep(2)
 
                 if bot_reply and str(bot_reply).strip():
                     st.markdown(bot_reply)
