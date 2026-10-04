@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Resmi Modeller)**")
+    st.write("Altyapı: **Groq (Türkçe Modeli)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -87,7 +87,7 @@ if "GROQ_API_KEY" in st.secrets:
             ZAMAN: {canli_tarih} - Saat: {canli_saat}
             
             KESİN KURALLAR:
-            1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
+            1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan. Asla Arapça veya başka bir dil kullanma!
             2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
             3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
             """
@@ -108,36 +108,29 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # --- KESİN ÇÖZÜM: RESMİ MODEL SEÇİCİ ---
+                        # --- KESİN ÇÖZÜM: TÜRKÇE KONUŞAN ANA MODEL SEÇİCİ ---
                         available_models = client.models.list().data
                         active_model = None
                         
-                        # 1. Aşama: Sözleşme İSTEMEYEN, kesinlikle çalışan resmi modeller listesi
-                        safe_models = [
-                            "mixtral-8x7b-32768",
-                            "llama3-8b-8192", 
-                            "gemma2-9b-it",
-                            "gemma-7b-it",
-                            "llama-3.3-70b-versatile"
-                        ]
+                        # 1. Asla kullanılmayacak modellerin listesi (Arapça, ses, görüntü vs.)
+                        banned_words = ["guard", "vision", "whisper", "embed", "jais", "arabic"]
+                        # 2. Sadece bu dev markaların modellerine izin ver
+                        allowed_brands = ["llama", "mixtral", "gemma"]
                         
-                        model_ids = [m.id for m in available_models]
-                        
-                        # Önce bizim listemizdeki modellerden biri açık mı diye bak
-                        for safe in safe_models:
-                            if safe in model_ids:
-                                active_model = safe
+                        for m in available_models:
+                            mid = m.id.lower()
+                            # Eğer model isminde '/' varsa (3. parti) veya yasaklı kelimelerden biri varsa DİREKT ATLA
+                            if "/" in mid or any(b in mid for b in banned_words):
+                                continue
+                            
+                            # İzin verilen ana modellerden biriyse hemen onu seç ve çık
+                            if any(brand in mid for brand in allowed_brands):
+                                active_model = m.id
                                 break
-                                
-                        # 2. Aşama: Eğer bizim listedekiler yoksa, içinde "/" OLMAYAN resmi bir model bul
+                        
+                        # Olur da hiçbir şey bulamazsa manuel olarak en güvenli alternatifi daya
                         if not active_model:
-                            banned_words = ["guard", "vision", "whisper", "embed"]
-                            for m in available_models:
-                                mid = m.id.lower()
-                                # '/' işareti olanlar topluluk modelidir (sözleşme ister), onları elliyoruz!
-                                if "/" not in mid and not any(b in mid for b in banned_words):
-                                    active_model = m.id
-                                    break
+                            active_model = "mixtral-8x7b-32768"
                         # --------------------------------------------------------
 
                         stream = client.chat.completions.create(
