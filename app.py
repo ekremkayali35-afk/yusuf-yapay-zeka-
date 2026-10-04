@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Akıllı Model Geçişli)**")
+    st.write("Altyapı: **Groq (Llama 3.1 & 3.3)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -71,87 +71,89 @@ with st.sidebar:
 if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
-    try:
-        client = Groq(api_key=api_key_val)
+    # API Anahtar formatı kontrolü
+    if not api_key_val.startswith("gsk_"):
+        st.error("🚨 **API Anahtarı Hatası:** Streamlit Secrets içindeki anahtar `gsk_` ile başlamıyor! Lütfen geçerli bir Groq anahtarı girdiğinden emin ol.")
+    else:
+        try:
+            client = Groq(api_key=api_key_val)
 
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+            if "messages" not in st.session_state:
+                st.session_state.messages = []
 
-        system_instruction = f"""
-        Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
-        Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
-        
-        ZAMAN: {canli_tarih} - Saat: {canli_saat}
-        
-        KESİN KURALLAR:
-        1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
-        2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
-        3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
-        """
+            system_instruction = f"""
+            Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
+            Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
+            
+            ZAMAN: {canli_tarih} - Saat: {canli_saat}
+            
+            KESİN KURALLAR:
+            1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
+            2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
+            3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
+            """
 
-        for message in st.session_state.messages:
-            avatar_icon = "👤" if message["role"] == "user" else "🤖"
-            with st.chat_message(message["role"], avatar=avatar_icon):
-                st.markdown(message["content"])
+            for message in st.session_state.messages:
+                avatar_icon = "👤" if message["role"] == "user" else "🤖"
+                with st.chat_message(message["role"], avatar=avatar_icon):
+                    st.markdown(message["content"])
 
-        if prompt := st.chat_input("Mesajını buraya yaz..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(prompt)
+            if prompt := st.chat_input("Mesajını buraya yaz..."):
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user", avatar="👤"):
+                    st.markdown(prompt)
 
-            with st.chat_message("assistant", avatar="🤖"):
-                try:
-                    groq_messages = [{"role": "system", "content": system_instruction}]
-                    for msg in st.session_state.messages:
-                        groq_messages.append({"role": msg["role"], "content": msg["content"]})
+                with st.chat_message("assistant", avatar="🤖"):
+                    try:
+                        groq_messages = [{"role": "system", "content": system_instruction}]
+                        for msg in st.session_state.messages:
+                            groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Akıllı Model Deneme Listesi (Hangisi açıksa otomatik seçecek)
-                    candidate_models = [
-                        "llama-3.1-8b-instant",
-                        "llama-3.3-70b-versatile",
-                        "llama-3.2-3b-preview",
-                        "llama-3.2-11b-vision-preview"
-                    ]
+                        # Güncel ve kararlı model havuzu
+                        candidate_models = [
+                            "llama-3.1-8b-instant",
+                            "llama-3.3-70b-versatile"
+                        ]
 
-                    stream = None
-                    last_error = None
+                        stream = None
+                        last_error = None
 
-                    for model_name in candidate_models:
-                        try:
-                            stream = client.chat.completions.create(
-                                model=model_name,
-                                messages=groq_messages,
-                                temperature=0.6,
-                                max_tokens=1024,
-                                stream=True
-                            )
-                            break # Başarılı model bulunduğunda döngüden çık
-                        except Exception as err:
-                            last_error = err
-                            continue
+                        for model_name in candidate_models:
+                            try:
+                                stream = client.chat.completions.create(
+                                    model=model_name,
+                                    messages=groq_messages,
+                                    temperature=0.6,
+                                    max_tokens=1024,
+                                    stream=True
+                                ??) # syntax fix:
+                                break
+                            except Exception as err:
+                                last_error = err
+                                continue
 
-                    if stream is None:
-                        raise Exception(f"Tüm modeller denendi ancak erişilemedi. Son Hata: {last_error}")
+                        if stream is None:
+                            raise Exception(f"Tüm modeller denendi. Detay: {last_error}")
 
-                    def generate_reply():
-                        full_response = ""
-                        for chunk in stream:
-                            if chunk.choices[0].delta.content:
-                                text_chunk = chunk.choices[0].delta.content
-                                full_response += text_chunk
-                                yield text_chunk
-                        st.session_state.temp_full_reply = full_response
+                        def generate_reply():
+                            full_response = ""
+                            for chunk in stream:
+                                if chunk.choices[0].delta.content:
+                                    text_chunk = chunk.choices[0].delta.content
+                                    full_response += text_chunk
+                                    yield text_chunk
+                            st.session_state.temp_full_reply = full_response
 
-                    bot_reply = st.write_stream(generate_reply())
-                    
-                    if "temp_full_reply" in st.session_state:
-                        st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
-                        del st.session_state.temp_full_reply
+                        bot_reply = st.write_stream(generate_reply())
+                        
+                        if "temp_full_reply" in st.session_state:
+                            st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
+                            del st.session_state.temp_full_reply
 
-                except Exception as e:
-                    st.error(f"⚠️ Groq API İstek Hatası: {e}")
+                    except Exception as e:
+                        st.error(f"⚠️ Groq API İstek Hatası: {e}")
 
-    except Exception as e:
-        st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
+        except Exception as e:
+            st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
