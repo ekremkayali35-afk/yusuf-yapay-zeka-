@@ -98,32 +98,31 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # TAMAMEN OTOMATİK MODEL SEÇİCİ
+                # AKILLI GÜMRÜK FİLTRESİ
                 try:
-                    # Hesabına tanımlı tüm modelleri çek
                     models_info = client.models.list().data
                     available_models = [m.id for m in models_info]
                     
-                    # Sadece yazı yazabilen güvenli modelleri ayıkla
-                    candidate_models = [
-                        m for m in available_models 
-                        if ("llama" in m.lower() or "gemma" in m.lower() or "mixtral" in m.lower())
-                        and "guard" not in m.lower() 
-                        and "vision" not in m.lower()
-                        and "whisper" not in m.lower()
-                    ]
-                    
-                    # Eğer hiçbir filtreye uymazsa, eldeki ilk modeli zorla kullan
-                    if not candidate_models and available_models:
-                        candidate_models = [available_models[0]]
+                    candidate_models = []
+                    # Sadece adı Llama, Gemma veya Mixtral olan modelleri seç
+                    for m in available_models:
+                        name = m.lower()
+                        if "llama" in name or "gemma" in name or "mixtral" in name:
+                            # Sıkıntılı modelleri GÖZ ARDI ET (Ses, görüntü, sınıflandırma vs.)
+                            if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool"]):
+                                candidate_models.append(m)
+                                
+                    # Eğer liste yine de boş dönerse, garanti 2 modeli elden ver
+                    if not candidate_models:
+                        candidate_models = ["llama-3.1-8b-instant", "gemma2-9b-it"]
                         
                 except Exception as err:
-                    candidate_models = []
-                    st.error(f"Groq ile iletişim kurulamadı: {err}")
+                    candidate_models = ["llama-3.1-8b-instant"]
 
                 bot_reply = None
-                last_error = None
+                last_error = "Uygun sohbet modeli bulunamadı."
 
+                # Ayıklanan sağlam modelleri sırayla dene
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
@@ -140,18 +139,24 @@ if "GROQ_API_KEY" in st.secrets:
                                     if content:
                                         yield content
 
-                        bot_reply = st.write_stream(generate_stream())
+                        # Streamlit'e yazdırırken hatayı veya hiçliği (None) yakala
+                        reply = st.write_stream(generate_stream())
                         
-                        if bot_reply is not None and str(bot_reply).strip() != "":
+                        # Eğer geçerli bir kelime üretildiyse döngüyü bitir ve başarılı say
+                        if reply and str(reply).strip():
+                            bot_reply = reply
                             break
+                        else:
+                            last_error = f"{model_name} boş yanıt döndürdü."
+                            
                     except Exception as err:
-                        last_error = err
-                        continue
+                        last_error = f"{model_name} başarısız: {err}"
+                        continue # Hata verirse pes etme, diğer sağlam modele geç
 
-                if bot_reply is not None and str(bot_reply).strip() != "":
+                if bot_reply:
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Bağlantı Hatası: Kullanılabilir model bulunamadı veya API yetkiniz kısıtlanmış. Detay: {last_error}")
+                    st.error(f"⚠️ Bağlantı Hatası: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
