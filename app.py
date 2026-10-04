@@ -177,7 +177,7 @@ if "GROQ_API_KEY" in st.secrets:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
                     response = client.chat.completions.create(
-                        model=llama-3.1-8b-instant,
+                        model="llama-3.1-8b-instant",
                         messages=groq_messages,
                         temperature=0.3,
                         max_tokens=1000
