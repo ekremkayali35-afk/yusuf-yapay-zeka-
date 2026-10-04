@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Llama 3.2)**")
+    st.write("Altyapı: **Groq (Llama 3.1 Instant)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -108,8 +108,8 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # Groq'un güncel ve desteklenen Llama modeli (Alternatif olarak llama-3.2-90b-vision-preview de denenebilir ama 3b en stabili)
-                        active_model = "llama-3.2-3b"
+                        # Groq'un resmi ve ana üretim modeli
+                        active_model = "llama-3.1-8b-instant"
 
                         stream = client.chat.completions.create(
                             model=active_model,
