@@ -152,7 +152,7 @@ if "GROQ_API_KEY" in st.secrets:
 
                     # En kararlı ve hızlı Groq modeli
                     response = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
+                        model="llama-3.3-70b-versatile",
                         messages=groq_messages,
                         temperature=0.7,
                         max_tokens=1000
