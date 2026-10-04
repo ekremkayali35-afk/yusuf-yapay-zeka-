@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v12.2 (Groq Final)**")
+    st.write("Sürüm: **Yusuf AI v13.0 (Otomatik Model)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,12 +113,32 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# GROQ API MOTORU
+# GROQ API MOTORU VE OTOMATİK MODEL SEÇİCİ
 if "GROQ_API_KEY" in st.secrets:
-    api_key_val = st.secrets["GROQ_API_KEY"]
+    api_key_val = st.secrets["GROQ_DATA_KEY"] if "GROQ_DATA_KEY" in st.secrets else st.secrets["GROQ_API_KEY"]
     
     try:
         client = Groq(api_key=api_key_val)
+
+        # Aktif modelleri otomatik çek ve hata almamak için uygun bir text model bul
+        models_response = client.models.list()
+        available_models = [m.id for m in models_response.data if "whisper" not in m.id and "guard" not in m.id]
+        
+        # Öncelikli model tercih sıralaması
+        preferred_keywords = ["llama-3.3", "llama-3.1", "llama3", "gemma"]
+        selected_model = None
+        
+        for kw in preferred_keywords:
+            match = next((m for m in available_models if kw in m), None)
+            if match:
+                selected_model = match
+                break
+        
+        # Eğer listeden bulunamazsa ilk aktif modeli seç
+        if not selected_model and available_models:
+            selected_model = available_models[0]
+        elif not selected_model:
+            selected_model = "llama-3.1-8b-instant" # Son çare yedek
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -150,9 +170,8 @@ if "GROQ_API_KEY" in st.secrets:
                     for msg in st.session_state.messages[-6:]:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Groq güncel standart hızlı modeli
                     response = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
+                        model=selected_model,
                         messages=groq_messages,
                         temperature=0.7,
                         max_tokens=1000
