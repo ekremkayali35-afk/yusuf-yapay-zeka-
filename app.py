@@ -73,34 +73,45 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # En akıllı model öncelikli
-                candidate_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-                
-                response_placeholder = st.empty()
-                full_response = ""
+                # O an aktif çalışan modelleri canlı olarak sunucudan çekiyoruz
+                try:
+                    models_list = client.models.list()
+                    candidate_models = [
+                        m.id for m in models_list.data 
+                        if "whisper" not in m.id and "guard" not in m.id and "safetensors" not in m.id
+                    ]
+                except Exception:
+                    candidate_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
-                # Canlı Yazma Efekti (Streaming)
+                bot_reply = None
+                last_error = None
+
                 for model_name in candidate_models:
                     try:
-                        stream = client.chat.completions.create(
-                            model=model_name,
-                            messages=chat_messages,
-                            stream=True
-                        )
-                        for chunk in stream:
-                            if chunk.choices[0].delta.content:
-                                full_response += chunk.choices[0].delta.content
-                                response_placeholder.markdown(full_response + "▌")
-                        
-                        response_placeholder.markdown(full_response)
-                        break
-                    except Exception:
+                        # Streamlit'in kendi resmi canlı yayın fonksiyonu
+                        def generate_stream():
+                            response = client.chat.completions.create(
+                                model=model_name,
+                                messages=chat_messages,
+                                stream=True
+                            )
+                            for chunk in response:
+                                if chunk.choices and len(chunk.choices) > 0:
+                                    content = chunk.choices[0].delta.content
+                                    if content:
+                                        yield content
+
+                        bot_reply = st.write_stream(generate_stream())
+                        if bot_reply:
+                            break
+                    except Exception as err:
+                        last_error = err
                         continue
 
-                if full_response:
-                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                if bot_reply:
+                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error("⚠️ Yanıt oluşturulurken bir sorun yaşandı.")
+                    st.error(f"⚠️ Hata Oluştu: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Hata Oluştu: {e}")
