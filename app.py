@@ -1,7 +1,8 @@
 import streamlit as st
-from groq import Groq
+from google import genai
 from datetime import datetime, timedelta, timezone
 
+# 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
     page_title="Yusuf'un Yapay Zekası",
     page_icon="🤖",
@@ -9,6 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# 2. ARAYÜZ TASARIMI
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -48,6 +50,7 @@ st.markdown("""
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
+# 3. ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -56,16 +59,18 @@ canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday
 canli_saat = now.strftime("%H:%M")
 
 with st.sidebar:
-    st.header("⚙️️ Ayarlar")
+    st.header("⚙️ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
+    st.write("Altyapı: **Google Gemini**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-if "GROQ_API_KEY" in st.secrets:
+if "GEMINI_API_KEY" in st.secrets:
     try:
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        # Google GenAI resmi istemcisini başlatıyoruz
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -82,7 +87,7 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 
-                system_prompt = f"""
+                system_instruction = f"""
                 Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
                 Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
                 
@@ -94,64 +99,43 @@ if "GROQ_API_KEY" in st.secrets:
                 3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                chat_messages = [{"role": "system", "content": system_prompt}]
+                # Sohbet geçmişini Gemini formatına uygun hazırlıyoruz
+                gemini_contents = []
                 for msg in st.session_state.messages:
-                    chat_messages.append({"role": msg["role"], "content": msg["content"]})
+                    role_name = "user" if msg["role"] == "user" else "model"
+                    gemini_contents.append({
+                        "role": role_name,
+                        "parts": [{"text": msg["content"]}]
+                    })
 
-                # HESABINDA ANINDAERİŞİLEBİLİR TÜM MODELLERİ DİNAMİK ÇEK VE FİLTRELE
                 try:
-                    models_info = client.models.list().data
-                    available_models = [m.id for m in models_info]
-                    
-                    candidate_models = []
-                    for m in available_models:
-                        name = m.lower()
-                        # Sıkıntılı ve sohbet dışı modelleri dışarıda bırak, geri kalan metin modellerini al
-                        if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool", "audio", "whisper"]):
-                            candidate_models.append(m)
-                    
-                    # Eğer hiçbir filtre kalmazsa, API'nin döndürdüğü ilk modeli direkt yapıştır
-                    if not candidate_models and available_models:
-                        candidate_models = [available_models[0]]
-                except Exception as err:
-                    candidate_models = []
-                    st.error(f"Model listesi alınamadı: {err}")
+                    # Google'ın en güncel ve hızlı Flash modelini kullanıyoruz
+                    response = client.models.generate_content_stream(
+                        model="gemini-2.5-flash",
+                        contents=gemini_contents,
+                        config={
+                            "system_instruction": system_instruction,
+                            "temperature": 0.3,
+                            "max_output_tokens": 150
+                        }
+                    )
 
-                bot_reply = None
-                last_error = "Çalışan uygun bir model bulunamadı."
+                    def generate_stream():
+                        for chunk in response:
+                            if chunk.text:
+                                yield chunk.text
 
-                # Listelenen modelleri sırayla test et, hangisi cevap verirse onu kullan
-                for model_name in candidate_models:
-                    try:
-                        def generate_stream():
-                            response = client.chat.completions.create(
-                                model=model_name,
-                                messages=chat_messages,
-                                stream=True,
-                                temperature=0.3,
-                                max_tokens=150
-                            )
-                            for chunk in response:
-                                if chunk.choices and len(chunk.choices) > 0:
-                                    content = chunk.choices[0].delta.content
-                                    if content:
-                                        yield content
+                    bot_reply = st.write_stream(generate_stream())
 
-                        reply = st.write_stream(generate_stream())
-                        
-                        if reply and str(reply).strip():
-                            bot_reply = reply
-                            break
-                    except Exception as err:
-                        last_error = f"{model_name} hata verdi: {err}"
-                        continue
+                    if bot_reply and str(bot_reply).strip():
+                        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+                    else:
+                        st.error("⚠️ Model boş yanıt döndürdü.")
 
-                if bot_reply:
-                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                else:
-                    st.error(f"⚠️ Bağlantı Hatası: {last_error}")
+                except Exception as api_err:
+                    st.error(f"⚠️ Gemini API Hatası: {api_err}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
 else:
-    st.warning("🔑 GROQ_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarını kontrol et.")
+    st.warning("🔑 GEMINI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
