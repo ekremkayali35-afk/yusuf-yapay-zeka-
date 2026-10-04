@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v12.0 (Groq Kararlı)**")
+    st.write("Sürüm: **Yusuf AI v12.1 (Groq Kararlı)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -150,7 +150,7 @@ if "GROQ_API_KEY" in st.secrets:
                     for msg in st.session_state.messages[-6:]:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # En kararlı ve hızlı Groq modeli
+                    # Groq'un en güncel ve ana kararlı modeli
                     response = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=groq_messages,
@@ -166,6 +166,6 @@ if "GROQ_API_KEY" in st.secrets:
                     st.error(f"⚠️ Groq Yanıt Hatası: {e}")
 
     except Exception as e:
-        st.error(f"⚠️️ Bağlantı Hatası: {e}")
+        st.error(f"⚠️ Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
