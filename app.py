@@ -67,80 +67,73 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# İstemciyi önbelleğe alarak hız kazandırıyoruz
-@st.cache_resource
-def get_groq_client(api_key):
-    return Groq(api_key=api_key)
-
+# Anahtar kontrolü ve İstemci Oluşturma
 if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
-    # Güvenlik ve Doğruluk Kontrolü
-    if not api_key_val.startswith("gsk_"):
-        st.error("🚨 **API Anahtarı Hatası:** Streamlit Secrets içine yazdığın anahtar bir Groq anahtarı (`gsk_` ile başlayan) değil gibi görünüyor! Lütfen konsoldan doğru anahtarı aldığından emin ol.")
-    else:
-        try:
-            client = get_groq_client(api_key_val)
+    try:
+        # Doğrudan istemciyi başlatıyoruz (önbellek takılmasını önlemek için)
+        client = Groq(api_key=api_key_val)
 
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-            system_instruction = f"""
-            Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
-            Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
-            
-            ZAMAN: {canli_tarih} - Saat: {canli_saat}
-            
-            KESİN KURALLAR:
-            1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
-            2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
-            3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
-            """
+        system_instruction = f"""
+        Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
+        Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
+        
+        ZAMAN: {canli_tarih} - Saat: {canli_saat}
+        
+        KESİN KURALLAR:
+        1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
+        2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
+        3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
+        """
 
-            for message in st.session_state.messages:
-                avatar_icon = "👤" if message["role"] == "user" else "🤖"
-                with st.chat_message(message["role"], avatar=avatar_icon):
-                    st.markdown(message["content"])
+        for message in st.session_state.messages:
+            avatar_icon = "👤" if message["role"] == "user" else "🤖"
+            with st.chat_message(message["role"], avatar=avatar_icon):
+                st.markdown(message["content"])
 
-            if prompt := st.chat_input("Mesajını buraya yaz..."):
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user", avatar="👤"):
-                    st.markdown(prompt)
+        if prompt := st.chat_input("Mesajını buraya yaz..."):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt)
 
-                with st.chat_message("assistant", avatar="🤖"):
-                    try:
-                        groq_messages = [{"role": "system", "content": system_instruction}]
-                        for msg in st.session_state.messages:
-                            groq_messages.append({"role": msg["role"], "content": msg["content"]})
+            with st.chat_message("assistant", avatar="🤖"):
+                try:
+                    groq_messages = [{"role": "system", "content": system_instruction}]
+                    for msg in st.session_state.messages:
+                        groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # En kararlı Groq üretim modeli
-                        stream = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=groq_messages,
-                            temperature=0.6,
-                            max_tokens=1024,
-                            stream=True
-                        )
+                    # Groq'un güncel standart modeli
+                    stream = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=groq_messages,
+                        temperature=0.6,
+                        max_tokens=1024,
+                        stream=True
+                    )
 
-                        def generate_reply():
-                            full_response = ""
-                            for chunk in stream:
-                                if chunk.choices[0].delta.content:
-                                    text_chunk = chunk.choices[0].delta.content
-                                    full_response += text_chunk
-                                    yield text_chunk
-                            st.session_state.temp_full_reply = full_response
+                    def generate_reply():
+                        full_response = ""
+                        for chunk in stream:
+                            if chunk.choices[0].delta.content:
+                                text_chunk = chunk.choices[0].delta.content
+                                full_response += text_chunk
+                                yield text_chunk
+                        st.session_state.temp_full_reply = full_response
 
-                        bot_reply = st.write_stream(generate_reply())
-                        
-                        if "temp_full_reply" in st.session_state:
-                            st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
-                            del st.session_state.temp_full_reply
+                    bot_reply = st.write_stream(generate_reply())
+                    
+                    if "temp_full_reply" in st.session_state:
+                        st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
+                        del st.session_state.temp_full_reply
 
-                    except Exception as e:
-                        st.error(f"⚠️ Groq API Hatası: {e}")
+                except Exception as e:
+                    st.error(f"⚠️ Groq API İstek Hatası: {e}")
 
-        except Exception as e:
-            st.error(f"⚠️ Kritik Hata: {e}")
+    except Exception as e:
+        st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
 else:
-    st.warning("🔑 GROQ_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına `GROQ_API_KEY = \"gsk_...\"` şeklinde ekle.")
+    st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
