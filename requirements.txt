@@ -1,2 +1,2 @@
+google-generativeai
 streamlit
-groq>=0.4.0
