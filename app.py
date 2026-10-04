@@ -2,7 +2,6 @@ import streamlit as st
 from groq import Groq
 from datetime import datetime, timedelta, timezone
 
-# 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
     page_title="Yusuf'un Yapay Zekası",
     page_icon="🤖",
@@ -10,7 +9,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. ARAYÜZ TASARIMI
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -50,7 +48,6 @@ st.markdown("""
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
-# 3. ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -101,11 +98,25 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # SADECE EN GÜNCEL VE AKTİF MODELLER
-                candidate_models = [
-                    "llama-3.3-70b-versatile",
-                    "llama-3.1-8b-instant"
-                ]
+                # Sadece Groq üzerinde sorunsuz çalışan, sözleşmesiz standart modeller listesi
+                try:
+                    live_models = [m.id for m in client.models.list().data]
+                    guvenli_havuz = [
+                        "llama-3.3-70b-versatile",
+                        "llama-3.2-90b-vision-preview",
+                        "llama-3.2-11b-vision-preview",
+                        "llama-3.2-3b-preview",
+                        "gemma2-9b-it",
+                        "mixtral-8x7b-32768"
+                    ]
+                    
+                    # API'den gelen canlı liste ile bizim güvenli listeyi karşılaştırıp ortak olanları bulur
+                    candidate_models = [m for m in guvenli_havuz if m in live_models]
+                    
+                    if not candidate_models:
+                        candidate_models = ["llama-3.3-70b-versatile"] # En son çare
+                except Exception:
+                    candidate_models = ["llama-3.3-70b-versatile"]
 
                 bot_reply = None
                 last_error = None
@@ -137,7 +148,7 @@ if "GROQ_API_KEY" in st.secrets:
                 if bot_reply is not None and str(bot_reply).strip() != "":
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Hata: {last_error if last_error else 'Lütfen sayfayı yenileyip tekrar deneyin.'}")
+                    st.error(f"⚠️ Bağlantı Hatası: {last_error}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
