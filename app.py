@@ -1,6 +1,7 @@
 import streamlit as st
 from google import genai
 from datetime import datetime, timedelta, timezone
+import time
 
 # 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
@@ -103,22 +104,29 @@ if "GEMINI_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    # Sohbet geçmişini modele tam içerik olarak veriyoruz
                     contents = []
                     for msg in st.session_state.messages:
                         role_label = "Kullanıcı" if msg["role"] == "user" else "Asistan"
                         contents.append(f"{role_label}: {msg['content']}")
 
-                    # Doğrudan model üzerinden güvenli ve hızlı akışlı yanıt üretimi
-                    response_stream = client.models.generate_content_stream(
-                        model="gemini-3.8-flash",
-                        contents=contents,
-                        config={
-                            "system_instruction": system_instruction,
-                            "temperature": 0.5,
-                            "max_output_tokens": 800
-                        }
-                    )
+                    # Yoğunluk (503) hatalarına karşı otomatik 3 kez deneme mekanizması
+                    response_stream = None
+                    for attempt in range(3):
+                        try:
+                            response_stream = client.models.generate_content_stream(
+                                model="gemini-3.8-flash",
+                                contents=contents,
+                                config={
+                                    "system_instruction": system_instruction,
+                                    "temperature": 0.5,
+                                    "max_output_tokens": 800
+                                }
+                            )
+                            break
+                        except Exception:
+                            if attempt == 2:
+                                raise
+                            time.sleep(1.5)
 
                     def generate_reply():
                         full_response = ""
@@ -135,7 +143,7 @@ if "GEMINI_API_KEY" in st.secrets:
                         del st.session_state.temp_full_reply
 
                 except Exception as e:
-                    st.error(f"⚠️ Gemini API Hatası: {e}")
+                    st.error(f"⚠️ Gemini API Yoğunluk Hatası: Sunucu şu an çok kalabalık, lütfen bir saniye sonra tekrar dene. ({e})")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
