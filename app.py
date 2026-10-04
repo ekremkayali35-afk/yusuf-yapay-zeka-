@@ -119,7 +119,7 @@ if "GEMINI_API_KEY" in st.secrets:
                             break
                     except Exception as e:
                         api_err = e
-                        time.sleep(1.5) # 1.5 saniye bekleyip tekrar deneyecek
+                        time.sleep(1.5)
 
                 if bot_reply and str(bot_reply).strip():
                     st.markdown(bot_reply)
@@ -128,6 +128,6 @@ if "GEMINI_API_KEY" in st.secrets:
                     st.error(f"⚠️ Gemini API Yoğunluk Hatası: {api_err}")
 
     except Exception as e:
-        st.error(f>⚠️ Kritik Hata: {e}")
+        st.error(f"⚠️ Kritik Hata: {e}")
 else:
     st.warning("🔑 GEMINI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
