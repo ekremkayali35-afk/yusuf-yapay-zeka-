@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Llama 3.3)**")
+    st.write("Altyapı: **Groq (Llama 3)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -72,7 +72,6 @@ if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
     try:
-        # Doğrudan istemciyi başlatıyoruz (önbellek takılmasını önlemek için)
         client = Groq(api_key=api_key_val)
 
         if "messages" not in st.session_state:
@@ -106,9 +105,9 @@ if "GROQ_API_KEY" in st.secrets:
                     for msg in st.session_state.messages:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Groq'un güncel standart modeli
+                    # Ücretsiz hesaplarda %100 çalışan kararlı model
                     stream = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model="llama3-8b-8192",
                         messages=groq_messages,
                         temperature=0.6,
                         max_tokens=1024,
