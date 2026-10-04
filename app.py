@@ -103,14 +103,12 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    # Groq mesaj geçmişini hazırlıyoruz
                     groq_messages = [{"role": "system", "content": system_instruction}]
                     for msg in st.session_state.messages:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Groq'un şimşek hızındaki akış (streaming) özelliği
                     stream = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model="llama-3.1-8b-instant",
                         messages=groq_messages,
                         temperature=0.6,
                         max_tokens=1024,
