@@ -108,8 +108,8 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # Groq'un güncel Llama 3.2 serisi modeli
-                        active_model = "llama-3.2-3b-preview"
+                        # Groq'un güncel ve desteklenen Llama modeli (Alternatif olarak llama-3.2-90b-vision-preview de denenebilir ama 3b en stabili)
+                        active_model = "llama-3.2-3b"
 
                         stream = client.chat.completions.create(
                             model=active_model,
@@ -138,6 +138,6 @@ if "GROQ_API_KEY" in st.secrets:
                         st.error(f"⚠️ Groq API İstek Hatası: {e}")
 
         except Exception as e:
-            st.error(f"⚠️️ Groq Bağlantı Hatası: {e}")
+            st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
