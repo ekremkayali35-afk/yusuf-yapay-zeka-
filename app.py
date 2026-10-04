@@ -1,6 +1,7 @@
 import streamlit as st
 from google import genai
 from datetime import datetime, timedelta, timezone
+import time
 
 # 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
@@ -98,30 +99,35 @@ if "GEMINI_API_KEY" in st.secrets:
                 3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                try:
-                    # Google'ın hatada belirttiği güncel ve tam model kimliği
-                    response = client.models.generate_content(
-                        model="gemini-3.8-flash",
-                        contents=prompt,
-                        config={
-                            "system_instruction": system_instruction,
-                            "temperature": 0.3,
-                            "max_output_tokens": 150
-                        }
-                    )
+                bot_reply = None
+                api_err = None
+                
+                # Yoğunluk (503) hatasına karşı 3 kez otomatik deneme döngüsü
+                for attempt in range(3):
+                    try:
+                        response = client.models.generate_content(
+                            model="gemini-3.8-flash",
+                            contents=prompt,
+                            config={
+                                "system_instruction": system_instruction,
+                                "temperature": 0.3,
+                                "max_output_tokens": 150
+                            }
+                        )
+                        if response and response.text:
+                            bot_reply = response.text
+                            break
+                    except Exception as e:
+                        api_err = e
+                        time.sleep(1.5) # 1.5 saniye bekleyip tekrar deneyecek
 
-                    bot_reply = response.text if response and response.text else "Yanıt oluşturulamadı."
-
-                    if bot_reply and str(bot_reply).strip():
-                        st.markdown(bot_reply)
-                        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                    else:
-                        st.error("⚠️ Model boş yanıt döndürdü.")
-
-                except Exception as api_err:
-                    st.error(f"⚠️ Gemini API Hatası: {api_err}")
+                if bot_reply and str(bot_reply).strip():
+                    st.markdown(bot_reply)
+                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+                else:
+                    st.error(f"⚠️ Gemini API Yoğunluk Hatası: {api_err}")
 
     except Exception as e:
-        st.error(f"⚠️ Kritik Hata: {e}")
+        st.error(f>⚠️ Kritik Hata: {e}")
 else:
     st.warning("🔑 GEMINI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
