@@ -109,12 +109,12 @@ if "GEMINI_API_KEY" in st.secrets:
                         role_label = "Kullanıcı" if msg["role"] == "user" else "Asistan"
                         contents.append(f"{role_label}: {msg['content']}")
 
-                    # Yoğunluk (503) hatalarına karşı otomatik 3 kez deneme mekanizması
+                    # Kararlı model ve güçlü yeniden deneme döngüsü
                     response_stream = None
-                    for attempt in range(3):
+                    for attempt in range(5):
                         try:
                             response_stream = client.models.generate_content_stream(
-                                model="gemini-3.8-flash",
+                                model="gemini-2.5-flash",
                                 contents=contents,
                                 config={
                                     "system_instruction": system_instruction,
@@ -124,9 +124,9 @@ if "GEMINI_API_KEY" in st.secrets:
                             )
                             break
                         except Exception:
-                            if attempt == 2:
+                            if attempt == 4:
                                 raise
-                            time.sleep(1.5)
+                            time.sleep(1)
 
                     def generate_reply():
                         full_response = ""
@@ -143,7 +143,7 @@ if "GEMINI_API_KEY" in st.secrets:
                         del st.session_state.temp_full_reply
 
                 except Exception as e:
-                    st.error(f"⚠️ Gemini API Yoğunluk Hatası: Sunucu şu an çok kalabalık, lütfen bir saniye sonra tekrar dene. ({e})")
+                    st.error(f"⚠️ Bağlantı Hatası: Sunucu şu an çok yoğun, lütfen tekrar dene. ({e})")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
