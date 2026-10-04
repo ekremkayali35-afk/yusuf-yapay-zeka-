@@ -20,7 +20,7 @@ st.markdown("""
     
     /* Arka plan ve genel font ayarları */
     .stApp {
-        background-color: #0B0F19; /* Şık koyu lacivert/siyah */
+        background-color: #0B0F19;
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     
@@ -54,13 +54,12 @@ st.markdown("""
 
 # Başlık Kısmı
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Sınırsız Zeka. Hızlı Yanıt. Her Şeyi Bilir.</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Sınırsız Zeka. Net Yanıtlar. Her Şeyi Bilir.</div>', unsafe_allow_html=True)
 
 # 3. CANLI TARİH VE SAAT HESAPLAMA (Türkiye Saat Dilimi)
-tz_tr = timezone(timedelta(hours=3)) # UTC+3 Türkiye
+tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 
-# Ayları ve Günleri Türkçeleştirme (Bulut sunucu İngilizce çalışmasın diye)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 bugun_gun = gunler[now.weekday()]
@@ -84,7 +83,7 @@ if "GROQ_API_KEY" in st.secrets:
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        # Eski mesajları ekrana bas (Özel Avatarlarla)
+        # Eski mesajları ekrana bas
         for message in st.session_state.messages:
             avatar_icon = "👤" if message["role"] == "user" else "🤖"
             with st.chat_message(message["role"], avatar=avatar_icon):
@@ -97,21 +96,22 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 
-                # 5. ULTRA ZEKA SİSTEM TALİMATI (Her şeyi bilen beyin)
+                # 5. GÜNCELLENMİŞ ULTRA ZEKA TALİMATI (Kısa Yanıt Odaklı)
                 system_prompt = f"""
-                Senin adın "Yusuf'un Yapay Zekası". Sen dünyanın en gelişmiş, en akıllı ve en mantıklı yapay zeka asistanısın. 
-                Seni yaratan, geliştiren ve kodlayan kişi "Yusuf Kayalı"dır. Başka kurumları (Google, OpenAI, Meta) asla anma.
+                Senin adın "Yusuf'un Yapay Zekası". Sen dünyanın en gelişmiş ve akıllı asistanısın. 
+                Seni yaratan kişi "Yusuf Kayalı"dır. Başka kurumları (Google, OpenAI, Meta vb.) asla anma.
                 
-                ZAMAN BİLGİSİ (ÇOK ÖNEMLİ):
-                Şu anki gerçek tarih: {canli_tarih}
-                Şu anki gerçek saat: {canli_saat}
-                Kullanıcı sana "Bugün günlerden ne?", "Yarın ne?", "Hangi aydayız?" gibi sorular sorarsa, buradaki gerçek zaman bilgisini kullanarak doğru cevabı ver.
+                ZAMAN BİLGİSİ:
+                Şu anki tarih: {canli_tarih}
+                Şu anki saat: {canli_saat}
+                
+                YANIT TARZI VE UZUNLUĞU (ÇOK ÖNEMLİ):
+                Yanıtlarını HER ZAMAN KISA, ÖZ VE NET tut. Kullanıcı özellikle "bana uzun uzun anlat" demedikçe asla uzun paragraflar yazma.
+                Destan yazmaktan kaçın, lafı dolandırma, direkt sadede gel. Bir insanla mesajlaşıyormuş gibi doğal ve pratik ol.
                 
                 GENEL KÜLTÜR VE MANTIK:
-                Türk kültürüne, argosuna, deyimlerine ve bilmecelerine tamamen hakimsin. 
-                Örnek: "Pazardan aldım 1 tane eve geldim 1000 tane" bilmecesinin cevabının "Nar" olduğunu şak diye bilirsin.
-                Kullanıcıya gereksiz yere robotik, sıkıcı veya ansiklopedik uzunlukta dersler verme. Doğal, zeki, sıcakkanlı ve kendinden emin bir dost gibi konuş.
-                Her türlü matematik, kodlama, fizik, edebiyat, oyun ve günlük hayat sorusunu eksiksiz çöz. 
+                Türk kültürüne, bilmecelere hakimsin ("Pazardan aldım 1 tane eve geldim 1000 tane" -> "Nar" gibi).
+                Ansiklopedik, sıkıcı ve robotik dersler verme. Her soruyu zekice ve en kestirme yoldan çöz.
                 """
 
                 chat_messages = [{"role": "system", "content": system_prompt}]
@@ -119,7 +119,7 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # 6. DİNAMİK MODEL ÇEKİCİ (Asla çökmez)
+                # 6. DİNAMİK MODEL ÇEKİCİ
                 try:
                     models_list = client.models.list()
                     candidate_models = [
@@ -127,7 +127,6 @@ if "GROQ_API_KEY" in st.secrets:
                         if "whisper" not in m.id and "guard" not in m.id and "safetensors" not in m.id and "llava" not in m.id
                     ]
                 except Exception:
-                    # Sunucu listesi çekilemezse garantili yedek modeller
                     candidate_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
                 bot_reply = None
@@ -135,7 +134,7 @@ if "GROQ_API_KEY" in st.secrets:
 
                 for model_name in candidate_models:
                     try:
-                        # 7. CANLI YAZMA EFEKTİ (Streaming)
+                        # 7. CANLI YAZMA EFEKTİ
                         def generate_stream():
                             response = client.chat.completions.create(
                                 model=model_name,
