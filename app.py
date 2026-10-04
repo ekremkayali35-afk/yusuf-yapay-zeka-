@@ -102,10 +102,10 @@ if "GEMINI_API_KEY" in st.secrets:
                 bot_reply = None
                 api_err = None
                 
-                for attempt in range(3):
+                for attempt in range(4):
                     try:
                         response = client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model="gemini-3.8-flash",
                             contents=prompt,
                             config={
                                 "system_instruction": system_instruction,
