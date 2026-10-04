@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v13.0 (Otomatik Model)**")
+    st.write("Sürüm: **Yusuf AI v13.0 (Filtreli Otomatik Model)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,19 +113,25 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# GROQ API MOTORU VE OTOMATİK MODEL SEÇİCİ
+# GROQ API MOTORU VE AKILLI FİLTRELİ OTOMATİK MODEL SEÇİCİ
 if "GROQ_API_KEY" in st.secrets:
-    api_key_val = st.secrets["GROQ_DATA_KEY"] if "GROQ_DATA_KEY" in st.secrets else st.secrets["GROQ_API_KEY"]
+    api_key_val = st.secrets["GROQ_API_KEY"]
     
     try:
         client = Groq(api_key=api_key_val)
 
-        # Aktif modelleri otomatik çek ve hata almamak için uygun bir text model bul
+        # Çöpleri, sesleri, guard modellerini ve ingilizce/audio zırvalarını eleyen akıllı filtre
         models_response = client.models.list()
-        available_models = [m.id for m in models_response.data if "whisper" not in m.id and "guard" not in m.id]
+        available_models = [
+            m.id for m in models_response.data 
+            if "whisper" not in m.id 
+            and "guard" not in m.id 
+            and "english" not in m.id 
+            and "audio" not in m.id
+        ]
         
         # Öncelikli model tercih sıralaması
-        preferred_keywords = ["llama-3.3", "llama-3.1", "llama3", "gemma"]
+        preferred_keywords = ["llama-3.3", "llama-3.1", "llama3"]
         selected_model = None
         
         for kw in preferred_keywords:
@@ -134,11 +140,11 @@ if "GROQ_API_KEY" in st.secrets:
                 selected_model = match
                 break
         
-        # Eğer listeden bulunamazsa ilk aktif modeli seç
+        # Eğer listeden bulunamazsa ilk temiz modeli seç
         if not selected_model and available_models:
             selected_model = available_models[0]
         elif not selected_model:
-            selected_model = "llama-3.1-8b-instant" # Son çare yedek
+            selected_model = "llama-3.1-8b-instant"
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
