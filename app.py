@@ -101,7 +101,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v4.5 (Chat Modelleri Filtreli)**")
+    st.write("Sürüm: **Yusuf AI v5.0 (Tam Stabil)**")
     st.divider()
     if st.button("🧹 Sohbeti Sıfırla (Temizle)", use_container_width=True):
         st.session_state.messages = []
@@ -148,30 +148,26 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages[-4:]:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # SADECE SOHBET EDEBİLEN MODEL FİLTRESİ
-                        known_chat_models = [
+                        # RESMİ STANDART GROQ MODEL LİSTESİ (SLAÇ İÇEREN ÖZEL MODELLER ENGELLENDİ)
+                        preferred_models = [
                             "llama-3.1-8b-instant",
+                            "llama-3.3-70b-versatile",
                             "llama3-8b-8192",
                             "llama3-70b-8192",
                             "gemma2-9b-it",
                             "mixtral-8x7b-32768"
                         ]
-                        
-                        raw_models = [m.id for m in client.models.list().data]
-                        
+
                         active_model = None
-                        for model_candidate in known_chat_models:
-                            if model_candidate in raw_models:
-                                active_model = model_candidate
-                                break
-                        
-                        # Eğer bilinen listeyle eşleşme olmazsa sınıflandırma/güvenlik modellerini ele
-                        if not active_model:
-                            banned_keywords = ["guard", "whisper", "embed", "classify", "classifier", "vision", "audio", "mod"]
-                            for m_id in raw_models:
-                                if not any(b in m_id.lower() for b in banned_keywords):
-                                    active_model = m_id
+                        try:
+                            # Sadece slaç ('/') içermeyen standart modelleri tara
+                            raw_models = [m.id for m in client.models.list().data if "/" not in m.id]
+                            for pref in preferred_models:
+                                if pref in raw_models:
+                                    active_model = pref
                                     break
+                        except Exception:
+                            pass
 
                         if not active_model:
                             active_model = "llama-3.1-8b-instant"
