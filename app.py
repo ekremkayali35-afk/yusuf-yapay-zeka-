@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Meta Llama)**")
+    st.write("Altyapı: **Groq (Llama 3.2)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -108,8 +108,8 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # Groq konsolunda yeni hesaplarda standart olarak aktif gelen en güncel model kimliği
-                        active_model = "llama-3.1-8b-instant"
+                        # Groq'un güncel Llama 3.2 serisi modeli
+                        active_model = "llama-3.2-3b-preview"
 
                         stream = client.chat.completions.create(
                             model=active_model,
@@ -138,6 +138,6 @@ if "GROQ_API_KEY" in st.secrets:
                         st.error(f"⚠️ Groq API İstek Hatası: {e}")
 
         except Exception as e:
-            st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
+            st.error(f"⚠️️ Groq Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
