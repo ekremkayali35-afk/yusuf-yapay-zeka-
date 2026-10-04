@@ -56,7 +56,7 @@ canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday
 canli_saat = now.strftime("%H:%M")
 
 with st.sidebar:
-    st.header("⚙️ Ayarlar")
+    st.header("⚙️️ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
@@ -98,7 +98,7 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # Canlı tarama ve %100 sağlam Llama modeli garantisi
+                # HESABINDA ANINDAERİŞİLEBİLİR TÜM MODELLERİ DİNAMİK ÇEK VE FİLTRELE
                 try:
                     models_info = client.models.list().data
                     available_models = [m.id for m in models_info]
@@ -106,20 +106,21 @@ if "GROQ_API_KEY" in st.secrets:
                     candidate_models = []
                     for m in available_models:
                         name = m.lower()
-                        # Sadece güncel Llama serisini al, çöpleri ve deaktifleri ele
-                        if "llama-3.3" in name or "llama-3.1-70b" in name or "llama-3" in name:
-                            if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool", "decommissioned"]):
-                                candidate_models.append(m)
+                        # Sıkıntılı ve sohbet dışı modelleri dışarıda bırak, geri kalan metin modellerini al
+                        if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool", "audio", "whisper"]):
+                            candidate_models.append(m)
                     
-                    # Eğer dinamik listede çıkmazsa direkt en sağlam güncel ID'yi daya
-                    if not candidate_models:
-                        candidate_models = ["llama-3.3-70b-versatile"]
-                except Exception:
-                    candidate_models = ["llama-3.3-70b-versatile"]
+                    # Eğer hiçbir filtre kalmazsa, API'nin döndürdüğü ilk modeli direkt yapıştır
+                    if not candidate_models and available_models:
+                        candidate_models = [available_models[0]]
+                except Exception as err:
+                    candidate_models = []
+                    st.error(f"Model listesi alınamadı: {err}")
 
                 bot_reply = None
-                last_error = "Model yanıt üretemedi."
+                last_error = "Çalışan uygun bir model bulunamadı."
 
+                # Listelenen modelleri sırayla test et, hangisi cevap verirse onu kullan
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
@@ -142,7 +143,7 @@ if "GROQ_API_KEY" in st.secrets:
                             bot_reply = reply
                             break
                     except Exception as err:
-                        last_error = err
+                        last_error = f"{model_name} hata verdi: {err}"
                         continue
 
                 if bot_reply:
