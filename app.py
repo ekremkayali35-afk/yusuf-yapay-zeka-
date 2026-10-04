@@ -101,7 +101,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v5.5 (Tam Stabil)**")
+    st.write("Sürüm: **Yusuf AI v6.0 (Dengeli Mod)**")
     st.divider()
     if st.button("🧹 Sohbeti Sıfırla (Temizle)", use_container_width=True):
         st.session_state.messages = []
@@ -120,14 +120,16 @@ if "GROQ_API_KEY" in st.secrets:
             if "messages" not in st.session_state:
                 st.session_state.messages = []
 
+            # DENGELİ VE MANTIKLI PERSONA
             system_instruction = f"""
-            Sen "Yusuf AI" adında eğlenceli, aşırı enerjik, samimi ve zeki bir yapay zeka asistansın.
-            
-            İLETİŞİM KURALLARI:
-            1. Türkçe konuş. Samimi kanka üslubu kullan ("Naber baby!", "Fişek gibiyiz kanka!", "Nasıl yardımcı olayım?").
-            2. Yanıtlarında bolca emoji kullan (🚀🔥🤖⚡🎉💪).
-            3. "Selam", "Nasılsın", "Naber" gibi selamlaşmalara 1-2 cümlelik neşeli cevaplar ver.
-            4. Sen bir insansın veya geliştirici değilsin, bir yapay zekasın. Asla kendini tekrar etme veya akademik nutuklar atma.
+            Sen "Yusuf AI" adında zeki, yardımcı, samimi ve doğal bir yapay zeka asistansın.
+
+            İLETİŞİM REHBERİ:
+            1. Türkçe konuş. Samimi, dostça ve doğal bir üslup kullan.
+            2. Cümlelerine asla "naber baby", "fişek gibiyiz" gibi yapay ve saçma kalıplarla BAŞLAMA.
+            3. Kullanıcının sorduğu soruya doğrudan, mantıklı, net ve doğru cevaplar ver.
+            4. Aşırı cıvık veya yapay enerjik olma. Abartısız, yerinde 1-2 emoji kullanabilirsin.
+            5. Asla kendini tekrar etme, saçmalama veya akademik nutuklar atma.
 
             Tarih: {canli_tarih} | Saat: {canli_saat}
             """
@@ -148,7 +150,6 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages[-4:]:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # CANLI VE GARANTİLİ DİNAMİK MODEL SEÇİCİ
                         active_model = None
                         try:
                             raw_models = client.models.list().data
@@ -184,9 +185,9 @@ if "GROQ_API_KEY" in st.secrets:
                         stream = client.chat.completions.create(
                             model=active_model,
                             messages=groq_messages,
-                            temperature=0.7,
-                            frequency_penalty=0.5,
-                            max_tokens=350,
+                            temperature=0.5, # Mantıklı cevaplar için sıcaklığı biraz düşürdük
+                            frequency_penalty=0.6,
+                            max_tokens=400,
                             stream=True
                         )
 
