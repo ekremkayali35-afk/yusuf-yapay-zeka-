@@ -13,18 +13,15 @@ st.set_page_config(
 # 2. PROFESYONEL UYGULAMA ARAYÜZÜ (CSS - Özel Tasarım)
 st.markdown("""
     <style>
-    /* Streamlit'in varsayılan menülerini ve yazılarını gizle (Gerçek uygulama hissi) */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Arka plan ve genel font ayarları */
     .stApp {
         background-color: #0B0F19;
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     
-    /* Başlık stili */
     .main-title {
         text-align: center;
         color: #00E676;
@@ -34,7 +31,6 @@ st.markdown("""
         text-shadow: 0px 2px 4px rgba(0, 230, 118, 0.3);
     }
     
-    /* Alt başlık stili */
     .sub-title {
         text-align: center;
         color: #94A3B8;
@@ -42,7 +38,6 @@ st.markdown("""
         margin-bottom: 30px;
     }
     
-    /* Chat balonları genel tasarımı */
     .stChatMessage {
         border-radius: 18px;
         padding: 5px 15px;
@@ -52,22 +47,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Başlık Kısmı
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Sınırsız Zeka. Net Yanıtlar. Her Şeyi Bilir.</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
-# 3. CANLI TARİH VE SAAT HESAPLAMA (Türkiye Saat Dilimi)
+# 3. CANLI TARİH VE SAAT (Türkiye)
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
-
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-bugun_gun = gunler[now.weekday()]
-bugun_ay = aylar[now.month - 1]
-canli_tarih = f"{now.day} {bugun_ay} {now.year}, {bugun_gun}"
+canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday()]}"
 canli_saat = now.strftime("%H:%M")
 
-# 4. YAN MENÜ (Sohbeti Temizleme)
 with st.sidebar:
     st.header("⚙️ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
@@ -83,63 +73,60 @@ if "GROQ_API_KEY" in st.secrets:
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        # Eski mesajları ekrana bas
         for message in st.session_state.messages:
             avatar_icon = "👤" if message["role"] == "user" else "🤖"
             with st.chat_message(message["role"], avatar=avatar_icon):
                 st.markdown(message["content"])
 
-        if prompt := st.chat_input("Mesajını veya sorunu buraya yaz..."):
+        if prompt := st.chat_input("Mesajını buraya yaz..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user", avatar="👤"):
                 st.markdown(prompt)
 
             with st.chat_message("assistant", avatar="🤖"):
                 
-                # 5. GÜNCELLENMİŞ ULTRA ZEKA TALİMATI (Kısa Yanıt Odaklı)
+                # SIKI YÖNETİM TALİMATLARI
                 system_prompt = f"""
-                Senin adın "Yusuf'un Yapay Zekası". Sen dünyanın en gelişmiş ve akıllı asistanısın. 
-                Seni yaratan kişi "Yusuf Kayalı"dır. Başka kurumları (Google, OpenAI, Meta vb.) asla anma.
+                Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
+                Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
                 
-                ZAMAN BİLGİSİ:
-                Şu anki tarih: {canli_tarih}
-                Şu anki saat: {canli_saat}
+                ZAMAN: {canli_tarih} - Saat: {canli_saat}
                 
-                YANIT TARZI VE UZUNLUĞU (ÇOK ÖNEMLİ):
-                Yanıtlarını HER ZAMAN KISA, ÖZ VE NET tut. Kullanıcı özellikle "bana uzun uzun anlat" demedikçe asla uzun paragraflar yazma.
-                Destan yazmaktan kaçın, lafı dolandırma, direkt sadede gel. Bir insanla mesajlaşıyormuş gibi doğal ve pratik ol.
-                
-                GENEL KÜLTÜR VE MANTIK:
-                Türk kültürüne, bilmecelere hakimsin ("Pazardan aldım 1 tane eve geldim 1000 tane" -> "Nar" gibi).
-                Ansiklopedik, sıkıcı ve robotik dersler verme. Her soruyu zekice ve en kestirme yoldan çöz.
+                KESİN KURALLAR:
+                1. ASLA saçmalama, anlamsız kelime üretme. Kusursuz Türkçe kullan.
+                2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
+                3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
                 chat_messages = [{"role": "system", "content": system_prompt}]
-
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # 6. DİNAMİK MODEL ÇEKİCİ
+                # SADECE EN SAĞLAM VE ZEKİ MODELLER (Saçmalama İhtimali %0)
                 try:
-                    models_list = client.models.list()
-                    candidate_models = [
-                        m.id for m in models_list.data 
-                        if "whisper" not in m.id and "guard" not in m.id and "safetensors" not in m.id and "llava" not in m.id
-                    ]
+                    live_models = [m.id for m in client.models.list().data]
+                    guvenli_modeller = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+                    candidate_models = [m for m in guvenli_modeller if m in live_models]
+                    
+                    if not candidate_models: # Eğer 3'ü de yoksa en güvenli yedeğe geç
+                        candidate_models = ["llama-3.1-8b-instant"]
                 except Exception:
-                    candidate_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+                    candidate_models = ["llama-3.3-70b-versatile"]
 
                 bot_reply = None
                 last_error = None
 
                 for model_name in candidate_models:
                     try:
-                        # 7. CANLI YAZMA EFEKTİ
                         def generate_stream():
+                            # temperature=0.3 -> Ciddiyet ayarı (halüsinasyonu önler)
+                            # max_tokens=150 -> Uzun yazmasını fiziksel olarak engeller
                             response = client.chat.completions.create(
                                 model=model_name,
                                 messages=chat_messages,
-                                stream=True
+                                stream=True,
+                                temperature=0.3,
+                                max_tokens=150
                             )
                             for chunk in response:
                                 if chunk.choices and len(chunk.choices) > 0:
