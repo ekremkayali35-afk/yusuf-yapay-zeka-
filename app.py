@@ -66,14 +66,44 @@ with st.sidebar:
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
+        if "chat_session" in st.session_state:
+            del st.session_state.chat_session
         st.rerun()
+
+# İstemciyi önbelleğe alarak hız kazandırıyoruz
+@st.cache_resource
+def get_genai_client(api_key):
+    return genai.Client(api_key=api_key)
 
 if "GEMINI_API_KEY" in st.secrets:
     try:
-        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+        client = get_genai_client(st.secrets["GEMINI_API_KEY"])
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
+
+        system_instruction = f"""
+        Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
+        Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
+        
+        ZAMAN: {canli_tarih} - Saat: {canli_saat}
+        
+        KESİN KURALLAR:
+        1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
+        2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
+        3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
+        """
+
+        # Gemini Sohbet Oturumunu Başlat (Hız ve bağlam koruma için)
+        if "chat_session" not in st.session_state:
+            st.session_state.chat_session = client.chats.create(
+                model="gemini-3.8-flash",
+                config={
+                    "system_instruction": system_instruction,
+                    "temperature": 0.3,
+                    "max_output_tokens": 300
+                }
+            )
 
         for message in st.session_state.messages:
             avatar_icon = "👤" if message["role"] == "user" else "🤖"
@@ -86,39 +116,19 @@ if "GEMINI_API_KEY" in st.secrets:
                 st.markdown(prompt)
 
             with st.chat_message("assistant", avatar="🤖"):
-                
-                system_instruction = f"""
-                Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
-                Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
-                
-                ZAMAN: {canli_tarih} - Saat: {canli_saat}
-                
-                KESİN KURALLAR:
-                1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
-                2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
-                3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
-                """
-
                 bot_reply = None
                 api_err = None
                 
-                for attempt in range(4):
+                for attempt in range(3):
                     try:
-                        response = client.models.generate_content(
-                            model="gemini-3.8-flash",
-                            contents=prompt,
-                            config={
-                                "system_instruction": system_instruction,
-                                "temperature": 0.3,
-                                "max_output_tokens": 300
-                            }
-                        )
+                        # Hazır sohbet oturumu üzerinden hızlı gönderim
+                        response = st.session_state.chat_session.send_message(prompt)
                         if response and response.text:
                             bot_reply = response.text
                             break
                     except Exception as e:
                         api_err = e
-                        time.sleep(1.5)
+                        time.sleep(1)
 
                 if bot_reply and str(bot_reply).strip():
                     st.markdown(bot_reply)
