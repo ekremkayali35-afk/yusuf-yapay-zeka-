@@ -59,7 +59,7 @@ canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday
 canli_saat = now.strftime("%H:%M")
 
 with st.sidebar:
-    st.header("⚙️ Ayarlar")
+    st.header("⚙️️ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
     st.write("Altyapı: **Google Gemini**")
     st.divider()
@@ -69,7 +69,6 @@ with st.sidebar:
 
 if "GEMINI_API_KEY" in st.secrets:
     try:
-        # Google GenAI resmi istemcisini başlatıyoruz
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
         if "messages" not in st.session_state:
@@ -99,7 +98,6 @@ if "GEMINI_API_KEY" in st.secrets:
                 3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                # Sohbet geçmişini Gemini formatına uygun hazırlıyoruz
                 gemini_contents = []
                 for msg in st.session_state.messages:
                     role_name = "user" if msg["role"] == "user" else "model"
@@ -109,9 +107,9 @@ if "GEMINI_API_KEY" in st.secrets:
                     })
 
                 try:
-                    # Google'ın en güncel ve hızlı Flash modelini kullanıyoruz
+                    # Hata mesajında belirtilen en güncel model ismiyle güncellendi
                     response = client.models.generate_content_stream(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.8-flash",
                         contents=gemini_contents,
                         config={
                             "system_instruction": system_instruction,
