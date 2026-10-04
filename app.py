@@ -108,11 +108,10 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # --- DİNAMİK MODEL SEÇİCİ (404 HATASINI BİTİREN KOD) ---
+                        # --- DİNAMİK MODEL SEÇİCİ ---
                         available_models = client.models.list().data
-                        active_model = available_models[0].id # Varsayılan olarak listedeki ilk modeli al
+                        active_model = available_models[0].id
                         
-                        # Eğer listede Llama modeli varsa öncelikli olarak onu seç
                         for m in available_models:
                             if "llama" in m.id.lower() and "vision" not in m.id.lower():
                                 active_model = m.id
@@ -123,7 +122,7 @@ if "GROQ_API_KEY" in st.secrets:
                             model=active_model,
                             messages=groq_messages,
                             temperature=0.6,
-                            max_tokens=1024,
+                            max_tokens=512,  # <-- İŞTE BURAYI 512 YAPTIK!
                             stream=True
                         )
 
