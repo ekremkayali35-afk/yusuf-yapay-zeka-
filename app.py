@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v10.1 (Gemini Güncel)**")
+    st.write("Sürüm: **Yusuf AI v10.2 (Gemini 3.8)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -120,8 +120,8 @@ if "GEMINI_API_KEY" in st.secrets:
     try:
         genai.configure(api_key=api_key_val)
         
-        # En güncel ve stabil çalışan Gemini flash modeli
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Google'ın önerdiği yeni model
+        model = genai.GenerativeModel('gemini-3.8-flash')
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
