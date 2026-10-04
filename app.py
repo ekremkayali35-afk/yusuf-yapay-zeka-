@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v12.1 (Groq Kararlı)**")
+    st.write("Sürüm: **Yusuf AI v12.2 (Groq Final)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -150,9 +150,9 @@ if "GROQ_API_KEY" in st.secrets:
                     for msg in st.session_state.messages[-6:]:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Groq'un en güncel ve ana kararlı modeli
+                    # Groq güncel standart hızlı modeli
                     response = client.chat.completions.create(
-                        model="llama3-70b-8192",
+                        model="llama-3.1-8b-instant",
                         messages=groq_messages,
                         temperature=0.7,
                         max_tokens=1000
