@@ -98,31 +98,28 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # AKILLI GÜMRÜK FİLTRESİ
+                # Canlı tarama ve %100 sağlam Llama modeli garantisi
                 try:
                     models_info = client.models.list().data
                     available_models = [m.id for m in models_info]
                     
                     candidate_models = []
-                    # Sadece adı Llama, Gemma veya Mixtral olan modelleri seç
                     for m in available_models:
                         name = m.lower()
-                        if "llama" in name or "gemma" in name or "mixtral" in name:
-                            # Sıkıntılı modelleri GÖZ ARDI ET (Ses, görüntü, sınıflandırma vs.)
-                            if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool"]):
+                        # Sadece güncel Llama serisini al, çöpleri ve deaktifleri ele
+                        if "llama-3.3" in name or "llama-3.1-70b" in name or "llama-3" in name:
+                            if not any(bad in name for bad in ["guard", "whisper", "vision", "classify", "embed", "tool", "decommissioned"]):
                                 candidate_models.append(m)
-                                
-                    # Eğer liste yine de boş dönerse, garanti 2 modeli elden ver
+                    
+                    # Eğer dinamik listede çıkmazsa direkt en sağlam güncel ID'yi daya
                     if not candidate_models:
-                        candidate_models = ["llama-3.1-8b-instant", "gemma2-9b-it"]
-                        
-                except Exception as err:
-                    candidate_models = ["llama-3.1-8b-instant"]
+                        candidate_models = ["llama-3.3-70b-versatile"]
+                except Exception:
+                    candidate_models = ["llama-3.3-70b-versatile"]
 
                 bot_reply = None
-                last_error = "Uygun sohbet modeli bulunamadı."
+                last_error = "Model yanıt üretemedi."
 
-                # Ayıklanan sağlam modelleri sırayla dene
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
@@ -139,19 +136,14 @@ if "GROQ_API_KEY" in st.secrets:
                                     if content:
                                         yield content
 
-                        # Streamlit'e yazdırırken hatayı veya hiçliği (None) yakala
                         reply = st.write_stream(generate_stream())
                         
-                        # Eğer geçerli bir kelime üretildiyse döngüyü bitir ve başarılı say
                         if reply and str(reply).strip():
                             bot_reply = reply
                             break
-                        else:
-                            last_error = f"{model_name} boş yanıt döndürdü."
-                            
                     except Exception as err:
-                        last_error = f"{model_name} başarısız: {err}"
-                        continue # Hata verirse pes etme, diğer sağlam modele geç
+                        last_error = err
+                        continue
 
                 if bot_reply:
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
