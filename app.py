@@ -81,7 +81,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ÇİZİMİNE UYGUN DÜZEN (Sol: Yusuf AI / Sağ: naber baby)
+# ÇİZİME UYGUN HEADER (Sol: Yusuf AI / Sağ: naber baby)
 st.markdown("""
     <div class="header-box">
         <div class="yusuf-ai-title">Yusuf AI</div>
@@ -89,7 +89,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 3. ZAMAN BİLGİSİ
+# 3. CANLI ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -100,7 +100,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v2.0 (Neon)**")
+    st.write("Sürüm: **Yusuf AI v2.5 (Otomatik Model)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -119,13 +119,13 @@ if "GROQ_API_KEY" in st.secrets:
             if "messages" not in st.session_state:
                 st.session_state.messages = []
 
-            # AŞIRI ENERJİK VE EMOJİLİ SİSTEM TALİMATI
+            # ENERJİK VE EMOJİLİ SİSTEM TALİMATI
             system_instruction = f"""
             Senin adın "Yusuf AI". Seni kodlayan karizma geliştirici: Yusuf Kayalı! 🚀
             
             KİŞİLİK & ÜSLUP KURALLARI:
             1. Aşırı enerjik, samimi, kanka modunda ve eğlenceli konuş! 🔥😎
-            2. Yanıtlarında BOLCA emoji kullan (🚀, 🔥, 🤖, ⚡, ⚡️, 🎉, 💪).
+            2. Yanıtlarında BOLCA emoji kullan (🚀, 🔥, 🤖, ⚡, 🎉, 💪).
             3. Kısa selamlaşmalara neşeli ve samimi cevap ver ("Naber baby!", "Selam kanka naber!", "Fişek gibiyiz bugün!").
             4. Sorulan sorulara net, doğru ve bomba gibi açıklamalar yap. Asla cümleleri tekrar edip döngüye girme.
             5. Sen Yusuf Kayalı'nın kendisi DEĞİLSİN, onun yarattığı yapay zekasın.
@@ -149,24 +149,35 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # AKTİF MODEL SEÇİCİ
-                        preferred_models = [
+                        # --- TAMAMEN DİNAMİK VE HATASIZ MODEL SEÇİCİ ---
+                        all_models = client.models.list().data
+                        banned_keywords = ["guard", "vision", "whisper", "embed", "audio", "jais", "arabic"]
+                        
+                        # Kullanılabilir aktif sohbet modellerini listele
+                        valid_models = []
+                        for m in all_models:
+                            mid = m.id.lower()
+                            if "/" not in mid and not any(b in mid for b in banned_keywords):
+                                valid_models.append(m.id)
+                        
+                        # Öncelik sırasına göre kontrol et
+                        priority_models = [
                             "llama-3.3-70b-versatile",
-                            "llama-3.1-8b-instant",
+                            "llama3-8b-8192",
+                            "llama3-70b-8192",
                             "gemma2-9b-it"
                         ]
                         
-                        available_models = client.models.list().data
-                        available_ids = [m.id for m in available_models]
-                        
                         active_model = None
-                        for model_id in preferred_models:
-                            if model_id in available_ids:
-                                active_model = model_id
+                        for p in priority_models:
+                            if p in valid_models:
+                                active_model = p
                                 break
                         
-                        if not active_model:
-                            active_model = "llama-3.1-8b-instant"
+                        # Eğer öncelikli isimler listede yoksa, çalışan ilk modeli seç
+                        if not active_model and valid_models:
+                            active_model = valid_models[0]
+                        # --------------------------------------------------
 
                         stream = client.chat.completions.create(
                             model=active_model,
@@ -195,6 +206,6 @@ if "GROQ_API_KEY" in st.secrets:
                         st.error(f"⚠️ Yusuf AI Hatası: {e}")
 
         except Exception as e:
-            st.error(f"⚠️ Bağlantı Hatası: {e}")
+            st.error(f"⚠️️ Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
