@@ -2,17 +2,18 @@ import streamlit as st
 from groq import Groq
 from datetime import datetime, timedelta, timezone
 
-# 1. MOBİL UYUMLU SAYFA
+# 1. MOBİL VE MASAÜSTÜ UYUMLU SAYFA
 st.set_page_config(
-    page_title="Yusuf'un Yapay Zekası",
+    page_title="Yusuf AI",
     page_icon="🤖",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# 2. ARAYÜZ TASARIMI
+# 2. ÖZEL ÇİZİM TASARIMI VE CSS ANİMASYONLARI
 st.markdown("""
     <style>
+    /* Gizlemeler */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -22,33 +23,71 @@ st.markdown("""
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     
-    .main-title {
-        text-align: center;
-        color: #00E676;
-        font-size: 2.2rem;
+    /* YUSUF AI RENK DEĞİŞTİREN (RGB) ANİMASYON */
+    @keyframes rgbGlow {
+        0% { color: #FF0055; text-shadow: 0 0 12px rgba(255, 0, 85, 0.8); }
+        25% { color: #00E5FF; text-shadow: 0 0 12px rgba(0, 229, 255, 0.8); }
+        50% { color: #00FF66; text-shadow: 0 0 12px rgba(0, 255, 102, 0.8); }
+        75% { color: #FFBB00; text-shadow: 0 0 12px rgba(255, 187, 0, 0.8); }
+        100% { color: #FF0055; text-shadow: 0 0 12px rgba(255, 0, 85, 0.8); }
+    }
+    
+    /* BAŞLIK VE DÜZEN */
+    .header-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        border-bottom: 2px solid #00E5FF;
+        padding-bottom: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0px 6px 15px rgba(0, 229, 255, 0.25);
+    }
+    
+    .yusuf-ai-title {
+        font-size: 2.8rem;
+        font-weight: 900;
+        animation: rgbGlow 3s infinite linear;
+        margin: 0;
+        line-height: 1;
+        letter-spacing: 1px;
+    }
+    
+    .naber-baby-title {
+        font-size: 1.5rem;
         font-weight: 800;
-        margin-bottom: -10px;
-        text-shadow: 0px 2px 4px rgba(0, 230, 118, 0.3);
+        color: #FF007F;
+        text-shadow: 0 0 8px rgba(255, 0, 127, 0.6);
+        margin: 0;
+        letter-spacing: 0.5px;
     }
     
-    .sub-title {
-        text-align: center;
-        color: #94A3B8;
-        font-size: 1rem;
-        margin-bottom: 30px;
-    }
-    
+    /* SOHBET BALONLARI */
     .stChatMessage {
         border-radius: 18px;
-        padding: 5px 15px;
+        padding: 8px 16px;
         margin-bottom: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        background-color: #161F30;
+        border: 1px solid #2A364F;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    
+    /* YAZI YAZMA ALANI (ALT KISIM) */
+    .stChatInputContainer {
+        border-radius: 20px !important;
+        border: 2px solid #00E5FF !important;
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.4) !important;
+        background-color: #111827 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
+# ÇİZİMİNE UYGUN DÜZEN (Sol: Yusuf AI / Sağ: naber baby)
+st.markdown("""
+    <div class="header-box">
+        <div class="yusuf-ai-title">Yusuf AI</div>
+        <div class="naber-baby-title">naber baby</div>
+    </div>
+""", unsafe_allow_html=True)
 
 # 3. ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
@@ -61,18 +100,18 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Güncel Llama 3.3 / 3.1)**")
+    st.write("Sürüm: **Yusuf AI v2.0 (Neon)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-# Anahtar kontrolü ve İstemci Oluşturma
+# API ANAHTARI VE CHAT MOTORU
 if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
     if not api_key_val.startswith("gsk_"):
-        st.error("🚨 **API Anahtarı Hatası:** Streamlit Secrets içindeki anahtar `gsk_` ile başlamıyor! Lütfen geçerli bir Groq anahtarı girdiğinden emin ol.")
+        st.error("🚨 **API Anahtarı Hatası:** Secrets içindeki anahtar `gsk_` ile başlamıyor!")
     else:
         try:
             client = Groq(api_key=api_key_val)
@@ -80,16 +119,18 @@ if "GROQ_API_KEY" in st.secrets:
             if "messages" not in st.session_state:
                 st.session_state.messages = []
 
+            # AŞIRI ENERJİK VE EMOJİLİ SİSTEM TALİMATI
             system_instruction = f"""
-            Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
-            Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
+            Senin adın "Yusuf AI". Seni kodlayan karizma geliştirici: Yusuf Kayalı! 🚀
             
-            ZAMAN: {canli_tarih} - Saat: {canli_saat}
+            KİŞİLİK & ÜSLUP KURALLARI:
+            1. Aşırı enerjik, samimi, kanka modunda ve eğlenceli konuş! 🔥😎
+            2. Yanıtlarında BOLCA emoji kullan (🚀, 🔥, 🤖, ⚡, ⚡️, 🎉, 💪).
+            3. Kısa selamlaşmalara neşeli ve samimi cevap ver ("Naber baby!", "Selam kanka naber!", "Fişek gibiyiz bugün!").
+            4. Sorulan sorulara net, doğru ve bomba gibi açıklamalar yap. Asla cümleleri tekrar edip döngüye girme.
+            5. Sen Yusuf Kayalı'nın kendisi DEĞİLSİN, onun yarattığı yapay zekasın.
             
-            KESİN KURALLAR:
-            1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan. Asla Arapça veya farklı diller kullanma!
-            2. Uzun, detaylı, kapsamlı ve açıklayıcı yaz. Bilgi vermekten kaçınma, derinlemesine anlat.
-            3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
+            Tarih: {canli_tarih} | Saat: {canli_saat}
             """
 
             for message in st.session_state.messages:
@@ -97,7 +138,7 @@ if "GROQ_API_KEY" in st.secrets:
                 with st.chat_message(message["role"], avatar=avatar_icon):
                     st.markdown(message["content"])
 
-            if prompt := st.chat_input("Mesajını buraya yaz..."):
+            if prompt := st.chat_input("Mesajını yaz kanka..."):
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 with st.chat_message("user", avatar="👤"):
                     st.markdown(prompt)
@@ -108,7 +149,7 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # --- GÜNCEL VE AKTİF MODEL SEÇİCİ ---
+                        # AKTİF MODEL SEÇİCİ
                         preferred_models = [
                             "llama-3.3-70b-versatile",
                             "llama-3.1-8b-instant",
@@ -119,31 +160,18 @@ if "GROQ_API_KEY" in st.secrets:
                         available_ids = [m.id for m in available_models]
                         
                         active_model = None
-                        
-                        # 1. Öncelikli güncel modellerden hesabında açık olanı seç
                         for model_id in preferred_models:
                             if model_id in available_ids:
                                 active_model = model_id
                                 break
                         
-                        # 2. Bulunamazsa yasaklı/emekli modeller dışındaki canlı modelleri ara
-                        if not active_model:
-                            banned_keywords = ["guard", "vision", "whisper", "embed", "jais", "arabic", "mixtral", "decommissioned"]
-                            for m in available_models:
-                                mid = m.id.lower()
-                                if "/" not in mid and not any(b in mid for b in banned_keywords):
-                                    active_model = m.id
-                                    break
-                        
-                        # 3. Son çare resmi güncel anlık model
                         if not active_model:
                             active_model = "llama-3.1-8b-instant"
-                        # --------------------------------------------------------
 
                         stream = client.chat.completions.create(
                             model=active_model,
                             messages=groq_messages,
-                            temperature=0.6,
+                            temperature=0.7,
                             max_tokens=1024,
                             stream=True
                         )
@@ -164,9 +192,9 @@ if "GROQ_API_KEY" in st.secrets:
                             del st.session_state.temp_full_reply
 
                     except Exception as e:
-                        st.error(f"⚠️ Groq API İstek Hatası: {e}")
+                        st.error(f"⚠️ Yusuf AI Hatası: {e}")
 
         except Exception as e:
-            st.error(f"⚠️ Groq Bağlantı Hatası: {e}")
+            st.error(f"⚠️ Bağlantı Hatası: {e}")
 else:
     st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
