@@ -1,7 +1,6 @@
 import streamlit as st
 from google import genai
 from datetime import datetime, timedelta, timezone
-import time
 
 # 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
@@ -66,8 +65,6 @@ with st.sidebar:
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
-        if "chat_session" in st.session_state:
-            del st.session_state.chat_session
         st.rerun()
 
 # İstemciyi önbelleğe alarak hız kazandırıyoruz
@@ -94,17 +91,6 @@ if "GEMINI_API_KEY" in st.secrets:
         3. Yanıtlarında bolca emoji kullan ve enerjik, samimi bir dil benimse. 🚀🔥🤖
         """
 
-        # Gemini Sohbet Oturumunu Başlat
-        if "chat_session" not in st.session_state:
-            st.session_state.chat_session = client.chats.create(
-                model="gemini-3.8-flash",
-                config={
-                    "system_instruction": system_instruction,
-                    "temperature": 0.5,
-                    "max_output_tokens": 800  # Uzun yazabilmesi için artırıldı
-                }
-            )
-
         for message in st.session_state.messages:
             avatar_icon = "👤" if message["role"] == "user" else "🤖"
             with st.chat_message(message["role"], avatar=avatar_icon):
@@ -117,16 +103,29 @@ if "GEMINI_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    # Canlı akış (streaming) ile anında tepki verme
-                    response_stream = st.session_state.chat_session.send_message(prompt, stream=True)
-                    
+                    # Sohbet geçmişini modele tam içerik olarak veriyoruz
+                    contents = []
+                    for msg in st.session_state.messages:
+                        role_label = "Kullanıcı" if msg["role"] == "user" else "Asistan"
+                        contents.append(f"{role_label}: {msg['content']}")
+
+                    # Doğrudan model üzerinden güvenli ve hızlı akışlı yanıt üretimi
+                    response_stream = client.models.generate_content_stream(
+                        model="gemini-3.8-flash",
+                        contents=contents,
+                        config={
+                            "system_instruction": system_instruction,
+                            "temperature": 0.5,
+                            "max_output_tokens": 800
+                        }
+                    )
+
                     def generate_reply():
                         full_response = ""
                         for chunk in response_stream:
                             if chunk.text:
                                 full_response += chunk.text
                                 yield chunk.text
-                        # Tam metni oturum geçmişine kaydetmek için saklıyoruz
                         st.session_state.temp_full_reply = full_response
 
                     bot_reply = st.write_stream(generate_reply())
