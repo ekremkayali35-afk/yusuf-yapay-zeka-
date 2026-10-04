@@ -50,7 +50,7 @@ st.markdown("""
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
-# 3. ZAMAN BİLGİSİ
+# 3. ZAMAN BİLGİSİ (Canlı Saat ve Tarih)
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -85,6 +85,7 @@ if "GROQ_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 
+                # BEYİN YIKAMA: KISA VE ÖZ YANIT KURALLARI
                 system_prompt = f"""
                 Senin adın "Yusuf'un Yapay Zekası"sın. Seni kodlayan kişi "Yusuf Kayalı"dır.
                 Sen Yusuf DEĞİLSİN, onun yarattığı asistansın.
@@ -101,23 +102,29 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # SADECE HESABINDA AÇIK OLAN MODELLERİ ÇEKER
+                # SADECE ONAYLI VE SORUNSUZ MODELLERİ KULLANMA FİLTRESİ
                 try:
-                    # Hesabındaki kullanılabilir modelleri al
-                    live_models = [m.id for m in client.models.list().data if "whisper" not in m.id and "guard" not in m.id and "llava" not in m.id]
+                    live_models = [m.id for m in client.models.list().data]
                     
-                    # Öncelikli kalite sıramız
-                    oncelikli_modeller = ["llama-3.3-70b-versatile", "llama3-8b-8192", "gemma2-9b-it"]
+                    # Sadece bu güvenilir havuzdaki modellere izin veriyoruz
+                    guvenli_havuz = [
+                        "llama-3.3-70b-versatile",
+                        "llama-3.1-8b-instant",
+                        "llama3-8b-8192",
+                        "llama3-70b-8192",
+                        "gemma2-9b-it",
+                        "mixtral-8x7b-32768"
+                    ]
                     
-                    # Sadece sende erişimi olanları filtrele
-                    candidate_models = [m for m in oncelikli_modeller if m in live_models]
+                    # Sende açık olan ve güvenli havuzda bulunanları al
+                    candidate_models = [m for m in guvenli_havuz if m in live_models]
                     
-                    # Eğer öncelikliler yoksa hesabındaki ilk modeli kullan
-                    if not candidate_models and live_models:
-                        candidate_models = [live_models[0]]
+                    # Eğer hiçbiri yoksa, sadece isminde "llama" geçen standart bir modele zorla, saçma sapan modellere girme
+                    if not candidate_models:
+                        candidate_models = [m for m in live_models if "llama" in m.lower() and "guard" not in m.lower()]
                         
                 except Exception:
-                    candidate_models = ["llama-3.3-70b-versatile"]
+                    candidate_models = ["llama-3.1-8b-instant"]
 
                 bot_reply = None
                 last_error = None
@@ -125,8 +132,7 @@ if "GROQ_API_KEY" in st.secrets:
                 for model_name in candidate_models:
                     try:
                         def generate_stream():
-                            # max_tokens=150 ile fiziksel olarak kısa tutuyoruz
-                            # temperature=0.3 ile saçmalamasını engelliyoruz
+                            # max_tokens=150 (Fiziksel kısa sınır), temperature=0.3 (Ciddiyet)
                             response = client.chat.completions.create(
                                 model=model_name,
                                 messages=chat_messages,
