@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Akıllı Model)**")
+    st.write("Altyapı: **Groq (Resmi Modeller)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -108,30 +108,38 @@ if "GROQ_API_KEY" in st.secrets:
                         for msg in st.session_state.messages:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # --- AKILLI MODEL SEÇİCİ (GELİŞMİŞ FİLTRE) ---
+                        # --- KESİN ÇÖZÜM: RESMİ MODEL SEÇİCİ ---
                         available_models = client.models.list().data
                         active_model = None
                         
-                        # Guard (sınıflandırma), vision (görüntü) ve whisper (ses) modellerini ELEDİK!
-                        banned_words = ["guard", "vision", "whisper", "embed"]
+                        # 1. Aşama: Sözleşme İSTEMEYEN, kesinlikle çalışan resmi modeller listesi
+                        safe_models = [
+                            "mixtral-8x7b-32768",
+                            "llama3-8b-8192", 
+                            "gemma2-9b-it",
+                            "gemma-7b-it",
+                            "llama-3.3-70b-versatile"
+                        ]
                         
-                        # Sadece gerçek metin (chat) modellerini ara
-                        for m in available_models:
-                            model_id = m.id.lower()
-                            if "llama" in model_id and not any(b in model_id for b in banned_words):
-                                active_model = m.id
+                        model_ids = [m.id for m in available_models]
+                        
+                        # Önce bizim listemizdeki modellerden biri açık mı diye bak
+                        for safe in safe_models:
+                            if safe in model_ids:
+                                active_model = safe
                                 break
-                        
-                        # Eğer llama bulamazsa listedeki ilk uygun normal modeli al (örneğin mixtral veya gemma)
+                                
+                        # 2. Aşama: Eğer bizim listedekiler yoksa, içinde "/" OLMAYAN resmi bir model bul
                         if not active_model:
+                            banned_words = ["guard", "vision", "whisper", "embed"]
                             for m in available_models:
-                                model_id = m.id.lower()
-                                if not any(b in model_id for b in banned_words):
+                                mid = m.id.lower()
+                                # '/' işareti olanlar topluluk modelidir (sözleşme ister), onları elliyoruz!
+                                if "/" not in mid and not any(b in mid for b in banned_words):
                                     active_model = m.id
                                     break
                         # --------------------------------------------------------
 
-                        # Normal sohbet modelini bulduğumuz için kelime sınırını tekrar 1024'e çekiyoruz
                         stream = client.chat.completions.create(
                             model=active_model,
                             messages=groq_messages,
