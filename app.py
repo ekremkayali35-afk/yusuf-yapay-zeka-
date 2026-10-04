@@ -1,7 +1,6 @@
 import streamlit as st
-from google import genai
+from openai import OpenAI
 from datetime import datetime, timedelta, timezone
-import time
 
 # 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
@@ -62,15 +61,16 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Google Gemini**")
+    st.write("Altyapı: **ChatGPT (OpenAI)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-if "GEMINI_API_KEY" in st.secrets:
+if "OPENAI_API_KEY" in st.secrets:
     try:
-        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+        # OpenAI İstemcisini Başlatma
+        client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -95,37 +95,36 @@ if "GEMINI_API_KEY" in st.secrets:
                 
                 KESİN KURALLAR:
                 1. ASLA saçmalama, kelimeleri yarıda kesme. Kusursuz Türkçe kullan.
-                2. SADECE 6 VEYA 7 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
+                2. SADECE 1 VEYA 2 CÜMLE YAZ. Uzun destanlar yazmak kesinlikle yasak.
+                3. Ne sorulursa sorulsun sadede gel, lafı uzatma.
                 """
 
-                bot_reply = None
-                api_err = None
-                
-                for attempt in range(4):
-                    try:
-                        response = client.models.generate_content(
-                            model="gemini-3.8-flash",
-                            contents=prompt,
-                            config={
-                                "system_instruction": system_instruction,
-                                "temperature": 0.3,
-                                "max_output_tokens": 300  # Kesilmeyi önlemek için artırıldı
-                            }
-                        )
-                        if response and response.text:
-                            bot_reply = response.text
-                            break
-                    except Exception as e:
-                        api_err = e
-                        time.sleep(2)
+                # OpenAI mesaj formatını hazırlıyoruz (Geçmiş sohbeti de dahil eder)
+                openai_messages = [{"role": "system", "content": system_instruction}]
+                for msg in st.session_state.messages:
+                    openai_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                if bot_reply and str(bot_reply).strip():
-                    st.markdown(bot_reply)
-                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                else:
-                    st.error(f"⚠️ Gemini API Hatası: {api_err}")
+                try:
+                    # ChatGPT'nin en hızlı ve akıllı ekonomik modeli: gpt-4o-mini
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=openai_messages,
+                        temperature=0.3,
+                        max_tokens=300
+                    )
+
+                    bot_reply = response.choices[0].message.content
+
+                    if bot_reply and str(bot_reply).strip():
+                        st.markdown(bot_reply)
+                        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+                    else:
+                        st.error("⚠️ Model boş yanıt döndürdü.")
+
+                except Exception as api_err:
+                    st.error(f"⚠️ OpenAI API Hatası: {api_err}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
 else:
-    st.warning("🔑 GEMINI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
+    st.warning("🔑 OPENAI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
