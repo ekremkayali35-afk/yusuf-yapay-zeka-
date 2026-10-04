@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v14.0 (Dinamik Model Bulucu)**")
+    st.write("Sürüm: **Yusuf AI v14.1 (Kesin Çözüm)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -120,11 +120,10 @@ if "GROQ_API_KEY" in st.secrets:
     try:
         client = Groq(api_key=api_key_val)
 
-        # Groq'un o an hesabına verdiği TÜM modelleri çek ve text dışı olanları ele
+        # Modelleri çek ve temizle
         models_response = client.models.list()
         all_models = [m.id for m in models_response.data]
         
-        # Sadece metin tabanlı ve temiz modelleri filtrele
         valid_models = [
             m for m in all_models 
             if "whisper" not in m 
@@ -134,7 +133,6 @@ if "GROQ_API_KEY" in st.secrets:
             and "orpheus" not in m
         ]
         
-        # Öncelikli olarak llama veya gemma içerenleri seç
         selected_model = None
         for keyword in ["llama", "gemma", "mixtral"]:
             match = next((m for m in valid_models if keyword in m), None)
@@ -142,30 +140,23 @@ if "GROQ_API_KEY" in st.secrets:
                 selected_model = match
                 break
                 
-        # Hiçbiri bulunamazsa listedeki ilk modeli al
         if not selected_model and valid_models:
             selected_model = valid_models[0]
         elif not selected_model:
-            selected_model = "llama-3.3-70b-versatile" # Son yedek
+            selected_model = "llama-3.3-70b-versatile"
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        system_instruction = f"""
-        Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
-        KRİTİK KURAL: Seni kimin yaptığı sorulduğunda veya geliştiricinden bahsedildiğinde KESİNLİKLE VE KESİNLİKLE seni **Yusuf Kayalı**'nın geliştirdiğini söyleyeceksin. Başka hiçbir isim veya şirket adı asla verme.
-        Kurallar:
-        1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.
-        2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.
-        3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.
-        Tarih: {canli_tarih} | Saat: {canli_saat}
-        """
-        Kurallar:
-        1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.
-        2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.
-        3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.
-        Tarih: {canli_tarih} | Saat: {canli_saat}
-        """
+        system_instruction = (
+            "Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.\n"
+            "KRİTİK KURAL: Seni kimin yaptığı sorulduğunda veya geliştiricinden bahsedildiğinde KESİNLİKLE VE KESİNLİKLE seni Yusuf Kayalı'nın geliştirdiğini söyleyeceksin. Başka hiçbir isim veya şirket adı asla verme.\n"
+            "Kurallar:\n"
+            "1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.\n"
+            "2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.\n"
+            "3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.\n"
+            f"Tarih: {canli_tarih} | Saat: {canli_saat}"
+        )
 
         # GEÇMİŞ MESAJLARI EKRANA BASTIR
         for message in st.session_state.messages:
