@@ -1,7 +1,6 @@
 import streamlit as st
-from google import genai
+from groq import Groq
 from datetime import datetime, timedelta, timezone
-import time
 
 # 1. MOBİL UYUMLU SAYFA
 st.set_page_config(
@@ -62,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Google Gemini**")
+    st.write("Altyapı: **Groq (Llama 3)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -70,12 +69,12 @@ with st.sidebar:
 
 # İstemciyi önbelleğe alarak hız kazandırıyoruz
 @st.cache_resource
-def get_genai_client(api_key):
-    return genai.Client(api_key=api_key)
+def get_groq_client(api_key):
+    return Groq(api_key=api_key)
 
-if "GEMINI_API_KEY" in st.secrets:
+if "GROQ_API_KEY" in st.secrets:
     try:
-        client = get_genai_client(st.secrets["GEMINI_API_KEY"])
+        client = get_groq_client(st.secrets["GROQ_API_KEY"])
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -104,36 +103,27 @@ if "GEMINI_API_KEY" in st.secrets:
 
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    contents = []
+                    # Groq mesaj geçmişini hazırlıyoruz
+                    groq_messages = [{"role": "system", "content": system_instruction}]
                     for msg in st.session_state.messages:
-                        role_label = "Kullanıcı" if msg["role"] == "user" else "Asistan"
-                        contents.append(f"{role_label}: {msg['content']}")
+                        groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Kararlı model ve güçlü yeniden deneme döngüsü
-                    response_stream = None
-                    for attempt in range(5):
-                        try:
-                            response_stream = client.models.generate_content_stream(
-                                model="gemini-2.5-flash",
-                                contents=contents,
-                                config={
-                                    "system_instruction": system_instruction,
-                                    "temperature": 0.5,
-                                    "max_output_tokens": 800
-                                }
-                            )
-                            break
-                        except Exception:
-                            if attempt == 4:
-                                raise
-                            time.sleep(1)
+                    # Groq'un şimşek hızındaki akış (streaming) özelliği
+                    stream = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=groq_messages,
+                        temperature=0.6,
+                        max_tokens=1024,
+                        stream=True
+                    )
 
                     def generate_reply():
                         full_response = ""
-                        for chunk in response_stream:
-                            if chunk.text:
-                                full_response += chunk.text
-                                yield chunk.text
+                        for chunk in stream:
+                            if chunk.choices[0].delta.content:
+                                text_chunk = chunk.choices[0].delta.content
+                                full_response += text_chunk
+                                yield text_chunk
                         st.session_state.temp_full_reply = full_response
 
                     bot_reply = st.write_stream(generate_reply())
@@ -143,9 +133,9 @@ if "GEMINI_API_KEY" in st.secrets:
                         del st.session_state.temp_full_reply
 
                 except Exception as e:
-                    st.error(f"⚠️ Bağlantı Hatası: Sunucu şu an çok yoğun, lütfen tekrar dene. ({e})")
+                    st.error(f"⚠️ Groq API Hatası: {e}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
 else:
-    st.warning("🔑 GEMINI_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
+    st.warning("🔑 GROQ_API_KEY henüz tanımlanmamış. Lütfen Streamlit Secrets ayarlarına anahtarını ekle.")
