@@ -105,7 +105,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v13.0 (Filtreli Otomatik Model)**")
+    st.write("Sürüm: **Yusuf AI v14.0 (Dinamik Model Bulucu)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,38 +113,40 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# GROQ API MOTORU VE AKILLI FİLTRELİ OTOMATİK MODEL SEÇİCİ
+# GROQ API MOTORU VE DİNAMİK MODEL BULUCU
 if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
     try:
         client = Groq(api_key=api_key_val)
 
-        # Çöpleri, sesleri, guard modellerini ve ingilizce/audio zırvalarını eleyen akıllı filtre
+        # Groq'un o an hesabına verdiği TÜM modelleri çek ve text dışı olanları ele
         models_response = client.models.list()
-        available_models = [
-            m.id for m in models_response.data 
-            if "whisper" not in m.id 
-            and "guard" not in m.id 
-            and "english" not in m.id 
-            and "audio" not in m.id
+        all_models = [m.id for m in models_response.data]
+        
+        # Sadece metin tabanlı ve temiz modelleri filtrele
+        valid_models = [
+            m for m in all_models 
+            if "whisper" not in m 
+            and "guard" not in m 
+            and "audio" not in m 
+            and "embed" not in m
+            and "orpheus" not in m
         ]
         
-        # Öncelikli model tercih sıralaması
-        preferred_keywords = ["llama-3.3", "llama-3.1", "llama3"]
+        # Öncelikli olarak llama veya gemma içerenleri seç
         selected_model = None
-        
-        for kw in preferred_keywords:
-            match = next((m for m in available_models if kw in m), None)
+        for keyword in ["llama", "gemma", "mixtral"]:
+            match = next((m for m in valid_models if keyword in m), None)
             if match:
                 selected_model = match
                 break
-        
-        # Eğer listeden bulunamazsa ilk temiz modeli seç
-        if not selected_model and available_models:
-            selected_model = available_models[0]
+                
+        # Hiçbiri bulunamazsa listedeki ilk modeli al
+        if not selected_model and valid_models:
+            selected_model = valid_models[0]
         elif not selected_model:
-            selected_model = "llama-3.1-8b-instant"
+            selected_model = "llama-3.3-70b-versatile" # Son yedek
 
         if "messages" not in st.session_state:
             st.session_state.messages = []
@@ -153,7 +155,7 @@ if "GROQ_API_KEY" in st.secrets:
         Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
         Kurallar:
         1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.
-        2. Doğal, samimi bir arkadaş (kanka) gibi konuş, saçma döngülere asla girme.
+        2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.
         3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.
         Tarih: {canli_tarih} | Saat: {canli_saat}
         """
@@ -177,7 +179,7 @@ if "GROQ_API_KEY" in st.secrets:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
                     response = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
+                        model=selected_model,
                         messages=groq_messages,
                         temperature=0.3,
                         max_tokens=1000
