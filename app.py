@@ -61,7 +61,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Ayarlar")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Altyapı: **Groq (Llama 3.1)**")
+    st.write("Altyapı: **Groq (Akıllı Model Geçişli)**")
     st.divider()
     if st.button("🧹 Yeni Sohbet Başlat", use_container_width=True):
         st.session_state.messages = []
@@ -105,14 +105,33 @@ if "GROQ_API_KEY" in st.secrets:
                     for msg in st.session_state.messages:
                         groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                    # Groq'un güncel ana üretim modeli
-                    stream = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=groq_messages,
-                        temperature=0.6,
-                        max_tokens=1024,
-                        stream=True
-                    )
+                    # Akıllı Model Deneme Listesi (Hangisi açıksa otomatik seçecek)
+                    candidate_models = [
+                        "llama-3.1-8b-instant",
+                        "llama-3.3-70b-versatile",
+                        "llama-3.2-3b-preview",
+                        "llama-3.2-11b-vision-preview"
+                    ]
+
+                    stream = None
+                    last_error = None
+
+                    for model_name in candidate_models:
+                        try:
+                            stream = client.chat.completions.create(
+                                model=model_name,
+                                messages=groq_messages,
+                                temperature=0.6,
+                                max_tokens=1024,
+                                stream=True
+                            )
+                            break # Başarılı model bulunduğunda döngüden çık
+                        except Exception as err:
+                            last_error = err
+                            continue
+
+                    if stream is None:
+                        raise Exception(f"Tüm modeller denendi ancak erişilemedi. Son Hata: {last_error}")
 
                     def generate_reply():
                         full_response = ""
