@@ -2,7 +2,7 @@ import streamlit as st
 from groq import Groq
 from datetime import datetime, timedelta, timezone
 
-# 1. SAYFA YAPILANDIRMASI (TAM EKRAN VE GENİŞ DÜZEN)
+# 1. SAYFA YAPILANDIRMASI
 st.set_page_config(
     page_title="Yusuf AI",
     page_icon="🤖",
@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. ÖZEL NEON, RGB VE SİBERPUNK CSS TASARIMI
+# 2. NEON VE SİBERPUNK CSS TASARIMI
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -78,14 +78,14 @@ st.markdown("""
     }
     
     .stChatInputContainer textarea {
-        min-height: 90px !important;
+        min-height: 80px !important;
         font-size: 1rem !important;
         color: #FFFFFF !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# EKRAN BAŞLIĞI VE TASARIM
+# EKRAN BAŞLIĞI
 st.markdown("""
     <div class="header-box">
         <div class="yusuf-ai-title">Yusuf AI</div>
@@ -93,7 +93,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# CANLI TARIH VE SAAT ENTEGRASYONU
+# CANLI ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -101,11 +101,11 @@ aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağu
 canli_tarih = f"{now.day} {aylar[now.month - 1]} {now.year}, {gunler[now.weekday()]}"
 canli_saat = now.strftime("%H:%M")
 
-# YAN MENÜ VE KONTROLLER
+# YAN MENÜ
 with st.sidebar:
-    st.header("⚙️ Sistem Paneli")
+    st.header("⚙️️ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v7.0 (Süper Zeka)**")
+    st.write("Sürüm: **Yusuf AI v8.0 (Döngüye Son)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -126,27 +126,26 @@ if "GROQ_API_KEY" in st.secrets:
             if "messages" not in st.session_state:
                 st.session_state.messages = []
 
-            # DETAYLI VE ZENGİN KİŞİLİK / BİLGİ TALİMATI
+            # NET VE NET KONTROLLÜ SYSTEM PROMPT
             system_instruction = f"""
-            Sen "Yusuf AI" adında son derece akıllı, geniş genel kültüre sahip, samimi, eğlenceli ve yardımsever bir yapay zeka asistansın.
+            Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
 
-            BİLGİ VE KİŞİLİK REHBERİ:
-            1. YÜKSEK GENEL KÜLTÜR: OpenAI'ın ChatGPT'si, Anthropic'in Claude'u, Google Gemini, Groq altyapısı, yazılım dilleri (Python, JavaScript, HTML/CSS), bilgisayar donanımları, oyunlar (Valorant, Cyberpunk 2077 vb.), teknoloji ve günlük hayat hakkında eksiksiz bilgi sahibisin. Sana sorulan teknik veya genel sorulara doğru ve doyurucu cevaplar ver.
-            2. SAMİMİ VE DOĞAL ÜSLUP: Kullanıcıya dostça, kanka üslubuyla hitap et. Ancak yapay ve abartılı sloganlar (her cümlenin başında 'naber baby', 'fişek gibiyiz' vb.) kullanma. Doğal bir arkadaş gibi konuş.
-            3. DETAYLI VE AÇIKLAYICI YANITLAR: Sorulan soruları tek bir kelimeyle veya baştan savma geçiştirme. Adım adım, net, anlaşılır ve detaylı açıklamalar yap.
-            4. BİLGİSAYAR VE DİL MANTIĞI: Kod örnekleri istendiğinde temiz ve doğru Python/Streamlit kodları sun.
-            5. ZAMAN BİLGİSİ: Güncel tarih {canli_tarih}, saat {canli_saat}. Zamanla ilgili soruları buna göre yanıtla.
+            KURALLAR:
+            1. SADECE TÜRKÇE KONUŞ. Asla Arapça veya başka yabancı dillerde kelime/cümle kullanma.
+            2. Doğal, samimi bir arkadaş (kanka) gibi konuş. Kısa "selam", "naber" mesajlarına neşeli ve kısa yanıt ver.
+            3. Bilgi, teknoloji, ChatGPT, yazılım veya oyun sorularında detaylı, doğru ve açıklayıcı bilgiler ver.
+            4. Asla aynı kelimeleri ve cümleleri üst üste tekrarlama. Saçma döngülere girme.
 
-            Asla kendini tekrar etme, gereksiz saçmalama yapma. Her zaman kaliteli ve akıllı bir sohbet sun.
+            Tarih: {canli_tarih} | Saat: {canli_saat}
             """
 
-            # GEÇMİŞ MESAJLARI EKRANA BASTIRMA
+            # GEÇMİŞ MESAJLAR
             for message in st.session_state.messages:
                 avatar_icon = "👤" if message["role"] == "user" else "🤖"
                 with st.chat_message(message["role"], avatar=avatar_icon):
                     st.markdown(message["content"])
 
-            # KULLANICI GİRDİSİ
+            # KULLANICI MESAJI
             if prompt := st.chat_input("İstediğin konuyu sor kanka..."):
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 with st.chat_message("user", avatar="👤"):
@@ -155,50 +154,17 @@ if "GROQ_API_KEY" in st.secrets:
                 with st.chat_message("assistant", avatar="🤖"):
                     try:
                         groq_messages = [{"role": "system", "content": system_instruction}]
-                        # Konuşma akışını korumak için son 6 mesajı hafızada tut
-                        for msg in st.session_state.messages[-6:]:
+                        for msg in st.session_state.messages[-4:]:
                             groq_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                        # SADECE EN GÜÇLÜ SOHBET MODELLERİNİ DİNAMİK SEÇ
-                        active_model = None
-                        try:
-                            raw_models = client.models.list().data
-                            banned_keywords = ["guard", "whisper", "embed", "vision", "audio", "classify", "classifier", "orpheus"]
-                            
-                            valid_models = [
-                                m.id for m in raw_models 
-                                if "/" not in m.id and not any(b in m.id.lower() for b in banned_keywords)
-                            ]
-                            
-                            # En akıllı modeller öncelikli
-                            priority_list = [
-                                "llama-3.3-70b-versatile",
-                                "llama3-70b-8192",
-                                "llama-3.1-8b-instant",
-                                "gemma2-9b-it",
-                                "mixtral-8x7b-32768"
-                            ]
-                            
-                            for p in priority_list:
-                                if p in valid_models:
-                                    active_model = p
-                                    break
-                            
-                            if not active_model and valid_models:
-                                active_model = valid_models[0]
-                        except Exception:
-                            pass
+                        # SADECE EN STABİL MODELLER
+                        active_model = "llama-3.3-70b-versatile"
 
-                        if not active_model:
-                            active_model = "llama-3.3-70b-versatile"
-
-                        # YANIT LİMİTİNİ UZATTIK (max_tokens=1000)
                         stream = client.chat.completions.create(
                             model=active_model,
                             messages=groq_messages,
-                            temperature=0.6,
-                            frequency_penalty=0.4,
-                            max_tokens=1000,
+                            temperature=0.7,
+                            max_tokens=800,
                             stream=True
                         )
 
