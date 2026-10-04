@@ -1,10 +1,10 @@
 import streamlit as st
-from groq import Groq
+import google.generativeai as genai
 from datetime import datetime, timedelta, timezone
 
 # 1. SAYFA YAPILANDIRMASI
 st.set_page_config(
-    page_title="Yusuf AI",
+    page_title="Yusuf AI - Gemini",
     page_icon="🤖",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -93,7 +93,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# CANLI ZAMAN BİLGİSİ
+# ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -103,9 +103,9 @@ canli_saat = now.strftime("%H:%M")
 
 # YAN MENÜ
 with st.sidebar:
-    st.header("⚙️️ Sistem Paneli")
+    st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v8.0 (Döngüye Son)**")
+    st.write("Sürüm: **Yusuf AI v10.0 (Gemini Gücü)**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,80 +113,63 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# CHAT VE YAPAY ZEKA MOTORU
-if "GROQ_API_KEY" in st.secrets:
-    api_key_val = st.secrets["GROQ_API_KEY"]
+# GEMINI API MOTORU
+if "GEMINI_API_KEY" in st.secrets:
+    api_key_val = st.secrets["GEMINI_API_KEY"]
     
-    if not api_key_val.startswith("gsk_"):
-        st.error("🚨 **API Anahtarı Hatası:** Secrets içindeki anahtar `gsk_` ile başlamıyor!")
-    else:
-        try:
-            client = Groq(api_key=api_key_val)
+    try:
+        genai.configure(api_key=api_key_val)
+        
+        # Google'ın en hızlı ve akıllı ücretsiz modeli: gemini-1.5-flash
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-            # NET VE NET KONTROLLÜ SYSTEM PROMPT
-            system_instruction = f"""
-            Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
+        system_instruction_text = f"""
+        Sen Yusuf AI adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.
+        Kurallar:
+        1. Sadece Türkçe konuş.
+        2. Samimi, doğal bir arkadaş gibi konuş, saçma döngülere asla girme.
+        3. Sorulara net, mantıklı ve açıklayıcı yanıtlar ver.
+        Tarih: {canli_tarih} | Saat: {canli_saat}
+        """
 
-            KURALLAR:
-            1. SADECE TÜRKÇE KONUŞ. Asla Arapça veya başka yabancı dillerde kelime/cümle kullanma.
-            2. Doğal, samimi bir arkadaş (kanka) gibi konuş. Kısa "selam", "naber" mesajlarına neşeli ve kısa yanıt ver.
-            3. Bilgi, teknoloji, ChatGPT, yazılım veya oyun sorularında detaylı, doğru ve açıklayıcı bilgiler ver.
-            4. Asla aynı kelimeleri ve cümleleri üst üste tekrarlama. Saçma döngülere girme.
+        # GEÇMİŞ MESAJLARI EKRANA BASTIR
+        for message in st.session_state.messages:
+            avatar_icon = "👤" if message["role"] == "user" else "🤖"
+            with st.chat_message(message["role"], avatar=avatar_icon):
+                st.markdown(message["content"])
 
-            Tarih: {canli_tarih} | Saat: {canli_saat}
-            """
+        # KULLANICI GİRDİSİ
+        if prompt := st.chat_input("İstediğin konuyu sor kanka..."):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt)
 
-            # GEÇMİŞ MESAJLAR
-            for message in st.session_state.messages:
-                avatar_icon = "👤" if message["role"] == "user" else "🤖"
-                with st.chat_message(message["role"], avatar=avatar_icon):
-                    st.markdown(message["content"])
+            with st.chat_message("assistant", avatar="🤖"):
+                try:
+                    # Gemini geçmiş formatına dönüştür
+                    gemini_history = []
+                    for msg in st.session_state.messages[:-1]:
+                        role_mapping = "user" if msg["role"] == "user" else "model"
+                        gemini_history.append({"role": role_mapping, "parts": [msg["content"]]})
 
-            # KULLANICI MESAJI
-            if prompt := st.chat_input("İstediğin konuyu sor kanka..."):
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user", avatar="👤"):
-                    st.markdown(prompt)
+                    chat = model.start_chat(history=gemini_history)
+                    
+                    # Sistem talimatını ve mesajı birleştirip gönder
+                    full_prompt = f"{system_instruction_text}\n\nKullanıcı: {prompt}"
+                    
+                    response = chat.send_message(full_prompt)
+                    bot_reply = response.text
 
-                with st.chat_message("assistant", avatar="🤖"):
-                    try:
-                        groq_messages = [{"role": "system", "content": system_instruction}]
-                        for msg in st.session_state.messages[-4:]:
-                            groq_messages.append({"role": msg["role"], "content": msg["content"]})
+                    st.markdown(bot_reply)
+                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
 
-                        # SADECE EN STABİL MODELLER
-                        active_model = "llama-3.3-70b-versatile"
+                except Exception as e:
+                    st.error(f"⚠️ Gemini Yanıt Hatası: {e}")
 
-                        stream = client.chat.completions.create(
-                            model=active_model,
-                            messages=groq_messages,
-                            temperature=0.7,
-                            max_tokens=800,
-                            stream=True
-                        )
-
-                        def generate_reply():
-                            full_response = ""
-                            for chunk in stream:
-                                if chunk.choices[0].delta.content:
-                                    text_chunk = chunk.choices[0].delta.content
-                                    full_response += text_chunk
-                                    yield text_chunk
-                            st.session_state.temp_full_reply = full_response
-
-                        bot_reply = st.write_stream(generate_reply())
-                        
-                        if "temp_full_reply" in st.session_state:
-                            st.session_state.messages.append({"role": "assistant", "content": st.session_state.temp_full_reply})
-                            del st.session_state.temp_full_reply
-
-                    except Exception as e:
-                        st.error(f"⚠️ Yusuf AI Hatası: {e}")
-
-        except Exception as e:
-            st.error(f"⚠️ Bağlantı Hatası: {e}")
+    except Exception as e:
+        st.error(f"⚠️ Gemini Bağlantı Hatası: {e}")
 else:
-    st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
+    st.warning("🔑 GEMINI_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
