@@ -102,11 +102,11 @@ if "GEMINI_API_KEY" in st.secrets:
                 bot_reply = None
                 api_err = None
                 
-                # Kararlı model ve genişletilmiş deneme aralığı
-                for attempt in range(4):
+                # Google'ın şu an en stabil ve hatasız yönlendirdiği flash modeli
+                for attempt in range(2):
                     try:
                         response = client.models.generate_content(
-                            model="gemini-1.5-flash",
+                            model="gemini-2.5-flash",
                             contents=prompt,
                             config={
                                 "system_instruction": system_instruction,
@@ -119,13 +119,13 @@ if "GEMINI_API_KEY" in st.secrets:
                             break
                     except Exception as e:
                         api_err = e
-                        time.sleep(2)
+                        time.sleep(1)
 
                 if bot_reply and str(bot_reply).strip():
                     st.markdown(bot_reply)
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Gemini API Yoğunluk Hatası: {api_err}")
+                    st.error(f"⚠️ Gemini API Hatası: {api_err}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
