@@ -50,7 +50,7 @@ st.markdown("""
 st.markdown('<div class="main-title">Yusuf\'un Yapay Zekası 🤖</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Net Yanıtlar. Sınırsız Zeka.</div>', unsafe_allow_html=True)
 
-# 3. ZAMAN BİLGİSİ (Canlı Saat ve Tarih)
+# 3. ZAMAN BİLGİSİ
 tz_tr = timezone(timedelta(hours=3))
 now = datetime.now(tz_tr)
 gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -101,11 +101,10 @@ if "GROQ_API_KEY" in st.secrets:
                 for msg in st.session_state.messages:
                     chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-                # GARANTİLİ VE SABİT MODELLER (Dinamik aramayı iptal ettik)
+                # SADECE EN GÜNCEL VE AKTİF MODELLER
                 candidate_models = [
                     "llama-3.3-70b-versatile",
-                    "llama-3.1-8b-instant",
-                    "llama3-8b-8192"
+                    "llama-3.1-8b-instant"
                 ]
 
                 bot_reply = None
@@ -119,7 +118,7 @@ if "GROQ_API_KEY" in st.secrets:
                                 messages=chat_messages,
                                 stream=True,
                                 temperature=0.3,
-                                max_tokens=200
+                                max_tokens=150
                             )
                             for chunk in response:
                                 if chunk.choices and len(chunk.choices) > 0:
@@ -129,18 +128,16 @@ if "GROQ_API_KEY" in st.secrets:
 
                         bot_reply = st.write_stream(generate_stream())
                         
-                        # Boş cevap dönmediğinden emin oluyoruz
                         if bot_reply is not None and str(bot_reply).strip() != "":
                             break
                     except Exception as err:
                         last_error = err
                         continue
 
-                # Ekrana basma ve hafızaya alma kontrolü
                 if bot_reply is not None and str(bot_reply).strip() != "":
                     st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 else:
-                    st.error(f"⚠️ Hata: {last_error if last_error else 'Model boş yanıt döndürdü, sayfayı yenileyin.'}")
+                    st.error(f"⚠️ Hata: {last_error if last_error else 'Lütfen sayfayı yenileyip tekrar deneyin.'}")
 
     except Exception as e:
         st.error(f"⚠️ Kritik Hata: {e}")
