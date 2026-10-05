@@ -4,13 +4,13 @@ from datetime import datetime, timedelta, timezone
 
 # 1. SAYFA YAPILANDIRMASI
 st.set_page_config(
-    page_title="Yusuf AI - Groq",
+    page_title="Yusuf AI - KuzvAi",
     page_icon="🤖",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# 2. NEON VE SİBERPUNK CSS TASARIMI
+# 2. NEON VE SİBERPUNK CSS TASARIMI (ÖZEL BAŞLIK YERLEŞİMİ)
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -40,22 +40,27 @@ st.markdown("""
         box-shadow: 0px 8px 20px rgba(0, 229, 255, 0.3);
     }
     
-    .yusuf-ai-title {
-        font-size: 3rem;
+    /* İstediğin eğik/stilize KuzvAi logosu (Sol Üst) */
+    .kuzvai-title {
+        font-size: 2.8rem;
         font-weight: 900;
+        transform: rotate(-6deg);
+        display: inline-block;
         animation: rgbGlow 3s infinite linear;
         margin: 0;
         line-height: 1;
         letter-spacing: 1.5px;
     }
     
-    .naber-baby-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #FF007F;
-        text-shadow: 0 0 10px rgba(255, 0, 127, 0.7);
+    /* Sağ üst boşluğa eklenen yazı */
+    .best-ai-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #00E5FF;
+        text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);
         margin: 0;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        text-align: right;
     }
     
     .stChatMessage {
@@ -85,11 +90,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# EKRAN BAŞLIĞI
+# EKRAN BAŞLIĞI (Sol Üstte KuzvAi, Sağ Üstte Best Artificial Intelligence)
 st.markdown("""
     <div class="header-box">
-        <div class="yusuf-ai-title">Yusuf AI</div>
-        <div class="naber-baby-title">naber baby</div>
+        <div>
+            <div class="kuzvai-title">KuzvAi</div>
+        </div>
+        <div>
+            <div class="best-ai-title">best artificial intelligence</div>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -105,7 +114,7 @@ canli_saat = now.strftime("%H:%M")
 with st.sidebar:
     st.header("⚙ Sistem Paneli")
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **Yusuf AI v14.1 (Kesin Çözüm)**")
+    st.write("Sürüm: **KuzvAi v15.0**")
     st.write(f"📅 Tarih: **{canli_tarih}**")
     st.write(f"⏰ Saat: **{canli_saat}**")
     st.divider()
@@ -113,14 +122,13 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# GROQ API MOTORU VE DİNAMİK MODEL BULUCU
+# GROQ API MOTORU VE DİNAMİK MODEL BULUCU (Altyapı birebir korundu)
 if "GROQ_API_KEY" in st.secrets:
     api_key_val = st.secrets["GROQ_API_KEY"]
     
     try:
         client = Groq(api_key=api_key_val)
 
-        # Modelleri çek ve temizle
         models_response = client.models.list()
         all_models = [m.id for m in models_response.data]
         
@@ -149,8 +157,8 @@ if "GROQ_API_KEY" in st.secrets:
             st.session_state.messages = []
 
         system_instruction = (
-            " Yusuf AI  zeki, doğal ve dost canlısı bir yapay zeka.\n"
-            "sana seni kim yaptı denldiğnde: Yusuf Kayalı'nın geliştirdiğini söyle.yusuf nasıl biri diye sorulduğu zaman: 15 yaşında çoook zeki ve akıllı bi çocuk kısaca çook havalı bi çocuk adamıımm diyeceksin ilk mesajda yusufu tanıtma\n"
+            "Sen KuzvAi adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.\n"
+            "KRİTİK KURAL: Seni kimin yaptığı sorulduğunda veya geliştiricinden bahsedildiğinde KESİNLİKLE VE KESİNLİKLE seni Yusuf Kayalı'nın geliştirdiğini söyleyeceksin. Başka hiçbir isim veya şirket adı asla verme.\n"
             "Kurallar:\n"
             "1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.\n"
             "2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.\n"
