@@ -168,7 +168,7 @@ with st.sidebar:
                 
     st.divider()
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **KuzvAi v16.3 (Fix)**")
+    st.write("Sürüm: **KuzvAi v16.4 (Fix)**")
     st.write(f"📅 **{canli_tarih}**")
     st.write(f"⏰ **{canli_saat}**")
 
@@ -219,3 +219,78 @@ if "GROQ_API_KEY" in st.secrets:
 
         # EKRANA GEÇMİŞ MESAJLARI BASTIR
         for message in current_messages:
+            avatar_icon = "👤" if message["role"] == "user" else "🤖"
+            with st.chat_message(message["role"], avatar=avatar_icon):
+                st.markdown(message["content"])
+                if "image" in message:
+                    st.image(message["image"], use_column_width=True)
+
+        # FOTOĞRAF YÜKLEME ALANI
+        uploaded_file = st.file_uploader("🖼️ Fotoğraf/Görsel Ekle (İsteğe Bağlı)", type=["png", "jpg", "jpeg", "webp"], key=f"upload_{st.session_state.active_session_id}")
+
+        # KULLANICI GİRDİSİ
+        if prompt := st.chat_input("Bir şeyler yaz veya soru sor kanka..."):
+            
+            if len(current_messages) == 0:
+                short_title = prompt[:20] + "..." if len(prompt) > 20 else prompt
+                st.session_state.chat_sessions[st.session_state.active_session_id]["title"] = short_title
+
+            user_msg = {"role": "user", "content": prompt}
+            
+            base64_image = None
+            if uploaded_file is not None:
+                bytes_data = uploaded_file.read()
+                base64_image = base64.b64encode(bytes_data).decode('utf-8')
+                user_msg["image"] = bytes_data
+
+            current_messages.append(user_msg)
+            
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt)
+                if base64_image:
+                    st.image(bytes_data, use_column_width=True)
+
+            with st.chat_message("assistant", avatar="🤖"):
+                try:
+                    if base64_image:
+                        response = client.chat.completions.create(
+                            model=vision_model,
+                            messages=[
+                                {"role": "system", "content": system_instruction},
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                                        }
+                                    ]
+                                }
+                            ],
+                            temperature=0.3,
+                            max_tokens=1000
+                        )
+                    else:
+                        groq_messages = [{"role": "system", "content": system_instruction}]
+                        for msg in current_messages[-6:]:
+                            groq_messages.append({"role": msg["role"], "content": msg["content"]})
+
+                        response = client.chat.completions.create(
+                            model=selected_model,
+                            messages=groq_messages,
+                            temperature=0.3,
+                            max_tokens=1000
+                        )
+
+                    bot_reply = response.choices[0].message.content
+                    st.markdown(bot_reply)
+                    current_messages.append({"role": "assistant", "content": bot_reply})
+
+                except Exception as e:
+                    st.error(f"⚠️ Groq Yanıt Hatası: {e}")
+
+    except Exception as e:
+        st.error(f"⚠️ Bağlantı Hatası: {e}")
+else:
+    st.warning("🔑 GROQ_API_KEY bulunamadı. Lütfen Streamlit Secrets ayarlarına ekle.")
