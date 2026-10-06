@@ -168,6 +168,54 @@ with st.sidebar:
                 
     st.divider()
     st.write("Geliştirici: **Yusuf Kayalı**")
-    st.write("Sürüm: **KuzvAi v16.2 (Stable)**")
+    st.write("Sürüm: **KuzvAi v16.3 (Fix)**")
     st.write(f"📅 **{canli_tarih}**")
-    st.write(f"⏰ **{canli
+    st.write(f"⏰ **{canli_saat}**")
+
+# AKTİF SOHBET MESAJLARINI AL
+current_messages = st.session_state.chat_sessions[st.session_state.active_session_id]["messages"]
+
+# GROQ API MOTORU
+if "GROQ_API_KEY" in st.secrets:
+    api_key_val = st.secrets["GROQ_API_KEY"]
+    
+    try:
+        client = Groq(api_key=api_key_val)
+
+        # Modelleri Çek
+        models_response = client.models.list()
+        all_models = [m.id for m in models_response.data]
+        
+        # Temiz Metin Modelleri
+        text_models = [
+            m for m in all_models 
+            if "whisper" not in m and "guard" not in m and "audio" not in m and "embed" not in m and "orpheus" not in m
+        ]
+        
+        selected_model = None
+        for kw in ["llama-3.3", "llama-3.1", "llama", "gemma", "mixtral"]:
+            match = next((m for m in text_models if kw in m), None)
+            if match:
+                selected_model = match
+                break
+                
+        if not selected_model and text_models:
+            selected_model = text_models[0]
+        elif not selected_model:
+            selected_model = "llama-3.3-70b-versatile"
+                
+        # Görsel (Vision) Modeli Seçimi
+        vision_model = next((m for m in all_models if "vision" in m), "llama-3.2-11b-vision-instruct")
+
+        system_instruction = (
+            "Sen KuzvAi adında Türkiye'de geliştirilmiş, zeki, doğal ve dost canlısı bir yapay zeka asistansın.\n"
+            "KRİTİK KURAL: Seni kimin yaptığı sorulduğunda veya geliştiricinden bahsedildiğinde KESİNLİKLE VE KESİNLİKLE seni Yusuf Kayalı'nın geliştirdiğini söyleyeceksin. Başka hiçbir isim veya şirket adı asla verme.\n"
+            "Kurallar:\n"
+            "1. Sadece Türkçe konuş. Yabancı dillerde kelime/cümle kullanma.\n"
+            "2. Doğal, samimi bir arkadaş (kanka) gibi konuş, asla saçma halüsinasyonlar görme, net ve mantıklı cevaplar ver.\n"
+            "3. Sorulara mantıklı, net ve açıklayıcı cevaplar ver.\n"
+            f"Tarih: {canli_tarih} | Saat: {canli_saat}"
+        )
+
+        # EKRANA GEÇMİŞ MESAJLARI BASTIR
+        for message in current_messages:
